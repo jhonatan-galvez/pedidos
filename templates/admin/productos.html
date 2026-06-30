@@ -1,0 +1,81 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Productos{% endblock %}
+
+{% block content %}
+
+<div class="erp-container">
+
+    <!-- ================= HEADER ================= -->
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">📦 Productos</h1>
+            <p class="erp-subtitle">Gestión de inventario y catálogo</p>
+        </div>
+
+        <a href="/admin/productos/nuevo" class="btn-primary">
+            + Nuevo producto
+        </a>
+
+    </div>
+
+    <!-- ================= GRID PRODUCTOS ================= -->
+    <div class="product-grid">
+
+        {% for p in productos %}
+
+        <div class="product-card">
+
+            <!-- HEADER -->
+            <div class="product-header">
+
+                <h3 class="product-name">{{ p.producto }}</h3>
+
+                {% if p.activo == 1 %}
+                    <span class="badge-active">Activo</span>
+                {% else %}
+                    <span class="badge-inactive">Inactivo</span>
+                {% endif %}
+
+            </div>
+
+            <!-- INFO -->
+            <div class="product-info">
+
+                <p><span>Código:</span> {{ p.codigo }}</p>
+                <p><span>Marca:</span> {{ p.marca }}</p>
+
+            </div>
+
+            <!-- STOCK + PRECIO -->
+            <div class="product-meta">
+
+                <div class="price">
+                    S/ {{ p.precio }}
+                </div>
+
+                <div class="stock">
+                    Stock: {{ p.stock }}
+                </div>
+
+            </div>
+
+            <!-- ACTIONS -->
+            <div class="product-actions">
+
+                <a href="/admin/productos/editar/{{ p.id }}" class="btn-secondary">
+                    Editar
+                </a>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+    </div>
+
+</div>
+
+{% endblock %}

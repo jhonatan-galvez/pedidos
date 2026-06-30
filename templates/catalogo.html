@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Catálogo - Chiquilina 🦋</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="container nav">
+        <div class="logo">📚 Chiquilina 🦋</div>
+        <nav>
+            <a href="/">Inicio</a>
+            <a class="active" href="/catalogo">Catálogo</a>
+            <a href="#">🛒 Carrito</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container main-layout">
+
+    <section class="catalog-section">
+        <div class="section-title">
+            <div>
+                <h2>Catálogo de productos</h2>
+                <p>Selecciona los productos para tu pedido.</p>
+            </div>
+
+            <input type="text" id="buscador" placeholder="Buscar producto..." class="search">
+        </div>
+
+        <div class="product-grid">
+
+            {% for producto in productos %}
+            <div class="product-card" data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }}">
+                <div class="product-img">📦</div>
+
+                <h3>{{ producto.producto }}</h3>
+
+                <p>
+                    Marca: {{ producto.marca }}<br>
+                    <!--Tipo: {{ producto.tipo }}<br>-->
+                    Presentación: {{ producto.presentacion }}<br>
+                    Stock: {{ producto.stock }}
+                </p>
+
+                <strong>S/ {{ "%.2f"|format(producto.precio) }}</strong>
+
+                {% if producto.stock > 0 %}
+                    <button
+                        class="agregar-carrito"
+                        data-codigo="{{ producto.codigo }}"
+                        data-producto="{{ producto.producto }}"
+                        data-marca="{{ producto.marca }}"
+                        data-precio="{{ producto.precio }}"
+                        data-stock="{{ producto.stock }}"
+                    >
+                        🛒 Agregar
+                    </button>
+                {% else %}
+                    <button disabled>Sin stock</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+        </div>
+    </section>
+
+    <aside class="cart-preview">
+        <h3>Mi pedido</h3>
+        <div id="lista-carrito">
+            <p>Aún no agregaste productos.</p>
+        </div>
+
+        <div class="cart-total">
+            <span>Total</span>
+            <strong id="total-carrito">S/ 0.00</strong>
+        </div>
+
+        <button id="btn-continuar" class="btn-continuar btn-disabled" disabled>
+            Continuar compra
+        </button>
+    </aside>
+
+</main>
+
+<script>
+    const buscador = document.getElementById("buscador");
+    const productos = document.querySelectorAll(".product-card");
+
+    buscador.addEventListener("input", function () {
+        const texto = buscador.value.toLowerCase().trim();
+
+        productos.forEach(function (producto) {
+            const nombre = producto.dataset.nombre.toLowerCase();
+
+            if (nombre.includes(texto)) {
+                producto.style.display = "";
+            } else {
+                producto.style.display = "none";
+            }
+        });
+    });
+</script>
+
+<script>
+let carrito = JSON.parse(localStorage.getItem("carrito")) || [];
+
+const listaCarrito = document.getElementById("lista-carrito");
+const totalCarrito = document.getElementById("total-carrito");
+const btnContinuar = document.getElementById("btn-continuar");
+
+function guardarCarrito() {
+    localStorage.setItem("carrito", JSON.stringify(carrito));
+}
+
+btnContinuar.addEventListener("click", () => {
+    if (carrito.length > 0) {
+        window.location.href = "/checkout";
+    }
+});
+
+function stockDisponible(item, stock) {
+    return item.cantidad < stock;
+}
+
+function renderizarCarrito() {
+    listaCarrito.innerHTML = "";
+    let total = 0;
+
+    if (carrito.length === 0) {
+        listaCarrito.innerHTML = "<p>Aún no agregaste productos.</p>";
+        totalCarrito.textContent = "S/ 0.00";
+        btnContinuar.disabled = true;
+        btnContinuar.classList.add("btn-disabled");
+        return;
+    }
+
+    carrito.forEach((item, index) => {
+        const totalItem = item.precio * item.cantidad;
+        total += totalItem;
+
+        listaCarrito.innerHTML += `
+            <div class="carrito-mini-item">
+
+                <div class="cabecera-item">
+                    <strong>${item.producto}</strong>
+
+                    <button class="mini-eliminar" onclick="eliminarProducto(${index})">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+
+                <p>${item.marca || ""}</p>
+
+                <div class="pie-item">
+                    <div class="cantidad-control">
+                        <button onclick="disminuirCantidad(${index})">−</button>
+                        <span>${item.cantidad}</span>
+                        <button onclick="aumentarCantidad(${index})">+</button>
+                    </div>
+
+                    <strong class="precio-item">S/ ${totalItem.toFixed(2)}</strong>
+                </div>
+
+            </div>
+        `;
+    });
+
+    totalCarrito.textContent = "S/ " + total.toFixed(2);
+    btnContinuar.disabled = false;
+    btnContinuar.classList.remove("btn-disabled");
+
+}
+
+function aumentarCantidad(index) {
+
+    const item = carrito[index];
+
+    if (item.cantidad + 1 > item.stock) {
+        alert("No puedes superar el stock disponible");
+        return;
+    }
+
+    item.cantidad++;
+    guardarCarrito();
+    renderizarCarrito();
+}
+
+function disminuirCantidad(index) {
+    if (carrito[index].cantidad > 1) {
+        carrito[index].cantidad--;
+    } else {
+        carrito.splice(index, 1);
+    }
+
+    guardarCarrito();
+    renderizarCarrito();
+}
+
+function eliminarProducto(index) {
+    carrito.splice(index, 1);
+    guardarCarrito();
+    renderizarCarrito();
+}
+
+document.querySelectorAll(".agregar-carrito").forEach(btn => {
+    btn.addEventListener("click", () => {
+        const codigo = btn.dataset.codigo;
+        const stock = Number(btn.dataset.stock || 0);
+        const producto = btn.dataset.producto;
+        const marca = btn.dataset.marca;
+        const precio = parseFloat(btn.dataset.precio);
+
+        const existente = carrito.find(p => String(p.codigo) === String(codigo));
+
+        if (existente) {
+            if (existente.cantidad + 1 <= stock) {
+                existente.cantidad++;
+            } else {
+                alert("No hay suficiente stock disponible");
+                return;
+            }
+        } else {
+            carrito.push({
+                codigo,
+                producto,
+                marca,
+                precio,
+                stock: Number(stock),
+                cantidad: 1
+            });
+        }
+
+        guardarCarrito();
+        renderizarCarrito();
+    });
+});
+
+renderizarCarrito();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,956 @@
+/* ===========================
+   VARIABLES
+=========================== */
+
+:root{
+
+    --sidebar:#0f172a;
+    --sidebar-hover:#1e293b;
+    --sidebar-active:#2563eb;
+
+    --background:#f1f5f9;
+
+    --card:#ffffff;
+
+    --text:#0f172a;
+    --text-light:#64748b;
+
+    --border:#e2e8f0;
+
+    --shadow:0 5px 20px rgba(0,0,0,.08);
+
+    --radius:16px;
+
+}
+
+
+/* ===========================
+   RESET
+=========================== */
+
+*{
+
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+
+}
+
+body{
+
+    font-family:"Inter",sans-serif;
+
+    background:var(--background);
+
+    color:var(--text);
+
+}
+
+
+/* ===========================
+   LAYOUT
+=========================== */
+
+.layout{
+
+    display:flex;
+
+    min-height:100vh;
+
+}
+
+
+/* ===========================
+   SIDEBAR
+=========================== */
+
+.sidebar{
+
+    width:260px;
+
+    background:var(--sidebar);
+
+    color:white;
+
+    display:flex;
+
+    flex-direction:column;
+
+    justify-content:space-between;
+
+    position:fixed;
+
+    left:0;
+
+    top:0;
+
+    bottom:0;
+
+}
+
+.logo{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:15px;
+
+    padding:30px;
+
+}
+
+.logo h2{
+
+    font-size:22px;
+
+}
+
+.logo span{
+
+    color:#94a3b8;
+
+    font-size:13px;
+
+}
+
+.menu{
+
+    display:flex;
+
+    flex-direction:column;
+
+    padding:0 15px;
+
+}
+
+.menu a{
+
+    color:#cbd5e1;
+
+    text-decoration:none;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:12px;
+
+    padding:14px 18px;
+
+    border-radius:12px;
+
+    transition:.25s;
+
+    margin-bottom:8px;
+
+    font-weight:500;
+
+}
+
+.menu a:hover{
+
+    background:var(--sidebar-hover);
+
+    color:white;
+
+}
+
+.menu .active{
+
+    background:var(--sidebar-active);
+
+    color:white;
+
+}
+
+.sidebar-footer{
+
+    padding:25px;
+
+    color:#94a3b8;
+
+}
+
+
+/* ===========================
+   CONTENIDO
+=========================== */
+
+.content{
+
+    flex:1;
+
+    margin-left:260px;
+
+    padding:30px;
+
+}
+
+
+/* ===========================
+   TOPBAR
+=========================== */
+
+.topbar{
+
+    background:white;
+
+    border-radius:16px;
+
+    padding:22px 28px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    box-shadow:var(--shadow);
+
+    margin-bottom:30px;
+
+}
+
+.topbar h1{
+
+    font-size:30px;
+
+}
+
+.topbar span{
+
+    color:var(--text-light);
+
+}
+
+.topbar-right{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    font-weight:600;
+
+}
+
+
+/* ===========================
+   CARDS
+=========================== */
+
+.cards{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+
+    gap:20px;
+
+}
+
+.card{
+
+    background:white;
+
+    border-radius:var(--radius);
+
+    padding:25px;
+
+    box-shadow:var(--shadow);
+
+    transition:.2s;
+
+}
+
+.card:hover{
+
+    transform:translateY(-4px);
+
+}
+
+.card-title{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    margin-bottom:15px;
+
+    font-weight:600;
+
+}
+
+.card-value{
+
+    font-size:36px;
+
+    font-weight:700;
+
+}
+
+
+/* ===========================
+   PANEL BLANCO
+=========================== */
+
+.panel{
+
+    background:white;
+
+    margin-top:25px;
+
+    border-radius:16px;
+
+    box-shadow:var(--shadow);
+
+    padding:25px;
+
+}
+
+.panel h2{
+
+    margin-bottom:20px;
+
+}
+
+
+/* ===========================
+   TABLAS
+=========================== */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+thead{
+
+    background:#f8fafc;
+
+}
+
+th{
+
+    text-align:left;
+
+    padding:15px;
+
+}
+
+td{
+
+    padding:15px;
+
+    border-top:1px solid var(--border);
+
+}
+
+
+/* ===========================
+   BADGES
+=========================== */
+
+.badge{
+
+    display:inline-block;
+
+    padding:6px 12px;
+
+    border-radius:30px;
+
+    color:white;
+
+    font-size:13px;
+
+}
+
+.badge-yellow{
+
+    background:#facc15;
+
+    color:black;
+
+}
+
+.badge-blue{
+
+    background:#3b82f6;
+
+}
+
+.badge-green{
+
+    background:#22c55e;
+
+}
+
+.badge-gray{
+
+    background:#64748b;
+
+}
+
+/* ===========================
+   GRID
+=========================== */
+
+.dashboard-grid{
+
+    display:grid;
+
+    grid-template-columns:2fr 1fr;
+
+    gap:20px;
+
+    margin-top:25px;
+
+}
+
+.stock-item{
+
+    padding:15px 0;
+
+    border-bottom:1px solid var(--border);
+
+}
+
+.stock-item:last-child{
+
+    border:none;
+
+}
+
+/* =======================================
+   DASHBOARD
+======================================= */
+
+.kpi{
+
+    border-left:6px solid transparent;
+
+}
+
+.pending{
+
+    border-left-color:#facc15;
+
+}
+
+.preparing{
+
+    border-left-color:#3b82f6;
+
+}
+
+.shipping{
+
+    border-left-color:#22c55e;
+
+}
+
+.delivered{
+
+    border-left-color:#64748b;
+
+}
+
+.kpi-header{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    font-size:18px;
+
+    margin-bottom:20px;
+
+}
+
+.money{
+
+    font-size:42px;
+
+    font-weight:bold;
+
+    color:#16a34a;
+
+}
+
+.panel-title{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:20px;
+
+}
+
+.summary-item{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    padding:14px 0;
+
+    border-bottom:1px solid var(--border);
+
+}
+
+.summary-item:last-child{
+
+    border:none;
+
+}
+
+table tbody tr{
+
+    transition:.2s;
+
+}
+
+table tbody tr:hover{
+
+    background:#f8fafc;
+
+}
+
+.btn-primary{
+
+    background:#2563eb;
+
+    color:white;
+
+    border:none;
+
+    padding:10px 18px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+    font-weight:600;
+
+}
+
+.btn-primary:hover{
+
+    background:#1d4ed8;
+
+}
+
+@media(max-width:1000px){
+
+    .dashboard-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
+}
+
+.order-info {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    background: #f7f8fa;
+    border-radius: 10px;
+}
+
+.order-info strong {
+    font-size: 13px;
+    color: #6b7280;;
+    display: block;
+}
+
+.order-info p {
+    margin: 2px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #222;
+}
+
+.order-info div:first-child p {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+}
+
+@media (max-width: 768px) {
+    .order-info {
+        grid-template-columns: 1fr;
+    }
+}
+
+.orders-list {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+    padding: 8px;
+}
+
+.order-card {
+    background: #fff;
+    border: 1px solid #292828;
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: 0.2s ease;
+}
+
+.order-card:hover {
+    border-color: #cfcfcf;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.order-header h2 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    color: #111;
+}
+
+.order-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+}
+
+.order-actions form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.detail-link {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2563eb;
+    text-decoration: none;
+}
+
+.detail-link:hover {
+    text-decoration: underline;
+}
+
+.badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 600;
+}
+
+.filters {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.filters .input,
+.filters select,
+.filters button {
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .filters {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================= CONTAINER ================= */
+.erp-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* ================= HEADER ================= */
+.erp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.erp-title {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.erp-subtitle {
+    font-size: 13px;
+    color: #777;
+}
+
+.badge-status {
+    background: #f3f4f6;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* ================= GRID ================= */
+.erp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+/* ================= CARD ================= */
+.erp-card {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.erp-card.full {
+    grid-column: 1 / -1;
+}
+
+/* ================= TABLE ================= */
+.erp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.erp-table th {
+    text-align: left;
+    font-size: 12px;
+    color: #666;
+    border-bottom: 1px solid #eee;
+    padding: 8px;
+}
+
+.erp-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #f2f2f2;
+    font-size: 13px;
+}
+
+/* ================= ACTIONS ================= */
+.erp-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    gap: 10px;
+}
+
+.erp-status-update form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* ================= BUTTONS (si no tienes) ================= */
+.btn-primary {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #111;
+    padding: 8px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+}
+
+/* ================= GRID MÉTRICAS ================= */
+.sync-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.sync-item {
+    background: #f9fafb;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.sync-item span {
+    font-size: 11px;
+    color: #6b7280;
+    display: block;
+}
+
+.sync-item strong {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+}
+
+/* errores en rojo */
+.danger {
+    color: #dc2626;
+}
+
+.danger-text {
+    color: #dc2626;
+    font-weight: 700;
+}
+
+/* muted */
+.muted {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+/* botón loading feel */
+#btnSincronizar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* responsive */
+@media (max-width: 768px) {
+    .sync-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ================= GRID ================= */
+.product-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+}
+
+/* ================= CARD ================= */
+.product-card {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: 0.2s ease;
+}
+
+.product-card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    border-color: #d0d0d0;
+    transform: translateY(-2px);
+}
+
+/* ================= HEADER ================= */
+.product-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.product-name {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+/* ================= INFO ================= */
+.product-info p {
+    margin: 2px 0;
+    font-size: 12px;
+    color: #555;
+}
+
+.product-info span {
+    font-weight: 600;
+    color: #111;
+}
+
+/* ================= META ================= */
+.product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f9fafb;
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.price {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111;
+}
+
+.stock {
+    font-size: 12px;
+    color: #555;
+}
+
+/* ================= BADGES ================= */
+.badge-active {
+    background: #dcfce7;
+    color: #166534;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.badge-inactive {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* ================= ACTIONS ================= */
+.product-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+    .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .product-grid {
+        grid-template-columns: 1fr;
+    }
+}

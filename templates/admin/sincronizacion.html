@@ -1,0 +1,232 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Sincronización{% endblock %}
+
+{% block content %}
+
+<div class="erp-container">
+
+    <!-- ================= HEADER ================= -->
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">Sincronización</h1>
+            <p class="erp-subtitle">Control de actualización de productos</p>
+        </div>
+
+        <div style="display:flex; gap:12px;">
+
+            <button id="btnSubirExcel" class="btn-secondary">
+                📤 Cargar nuevo Archivo Excel
+            </button>
+
+            <button id="btnSincronizar" class="btn-primary">
+                🔄 Sincronizar ahora
+            </button>
+
+        </div>
+
+        <input
+            type="file"
+            id="excelFile"
+            accept=".xlsx"
+            style="display:none">
+
+    </div>
+
+    <!-- ================= ÚLTIMA SINCRONIZACIÓN ================= -->
+    <div class="erp-card full">
+
+        <h3>Última sincronización</h3>
+
+        {% if ultima %}
+
+        <div class="sync-grid">
+
+            <div class="sync-item">
+                <span>Fecha</span>
+                <strong>{{ ultima.fecha }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Leídos</span>
+                <strong>{{ ultima.productos_leidos }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Nuevos</span>
+                <strong>{{ ultima.nuevos }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Actualizados</span>
+                <strong>{{ ultima.actualizados }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Sin cambios</span>
+                <strong>{{ ultima.sin_cambios }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Desactivados</span>
+                <strong>{{ ultima.desactivados }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Errores</span>
+                <strong class="danger">{{ ultima.errores }}</strong>
+            </div>
+
+            <div class="sync-item">
+                <span>Duración</span>
+                <strong>{{ ultima.duracion }} s</strong>
+            </div>
+
+        </div>
+
+        {% else %}
+
+        <p class="muted">No existen sincronizaciones aún.</p>
+
+        {% endif %}
+
+    </div>
+
+    <!-- ================= HISTORIAL ================= -->
+    <div class="erp-card full">
+
+        <h3>Historial de sincronización</h3>
+
+        <table class="erp-table">
+
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Leídos</th>
+                    <th>Nuevos</th>
+                    <th>Actualizados</th>
+                    <th>Sin cambios</th>
+                    <th>Desactivados</th>
+                    <th>Errores</th>
+                    <th>Duración</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for item in historial %}
+                <tr>
+                    <td>{{ item.fecha }}</td>
+                    <td>{{ item.productos_leidos }}</td>
+                    <td>{{ item.nuevos }}</td>
+                    <td>{{ item.actualizados }}</td>
+                    <td>{{ item.sin_cambios }}</td>
+                    <td>{{ item.desactivados }}</td>
+                    <td>
+                        {% if item.errores > 0 %}
+                            <span class="danger-text">{{ item.errores }}</span>
+                        {% else %}
+                            {{ item.errores }}
+                        {% endif %}
+                    </td>
+                    <td>{{ item.duracion }} s</td>
+                </tr>
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- ================= SCRIPT ================= -->
+<script>
+document.getElementById("btnSincronizar").addEventListener("click", async () => {
+
+    const btn = document.getElementById("btnSincronizar");
+    btn.disabled = true;
+    btn.innerText = "Sincronizando...";
+
+    try {
+        const respuesta = await fetch("/admin/sincronizar", {
+            method: "POST"
+        });
+
+        await respuesta.json();
+
+        alert("Sincronización completada");
+
+        location.reload();
+
+    } catch (error) {
+        alert("Error en sincronización");
+    }
+
+    btn.disabled = false;
+    btn.innerText = "🔄 Sincronizar ahora";
+});
+
+const inputExcel = document.getElementById("excelFile");
+
+document.getElementById("btnSubirExcel").addEventListener("click", () => {
+
+    inputExcel.click();
+
+});
+
+inputExcel.addEventListener("change", async () => {
+
+    if (inputExcel.files.length === 0)
+        return;
+
+    const archivo = inputExcel.files[0];
+
+    const formData = new FormData();
+
+    formData.append("archivo", archivo);
+
+    const boton = document.getElementById("btnSubirExcel");
+
+    boton.disabled = true;
+    boton.innerText = "Subiendo...";
+
+    try{
+
+        const respuesta = await fetch("/admin/upload_excel",{
+
+            method:"POST",
+            body:formData
+
+        });
+
+        const data = await respuesta.json();
+
+        if(data.ok){
+
+            alert("Catálogo actualizado correctamente.");
+
+            location.reload();
+
+        }else{
+
+            alert(data.mensaje);
+
+        }
+
+    }catch(e){
+
+        alert("Error al subir el archivo.");
+
+    }
+
+    boton.disabled=false;
+    boton.innerText="📤 Actualizar catálogo";
+
+});
+
+</script>
+
+{% endblock %}

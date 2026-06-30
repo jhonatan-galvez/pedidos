@@ -1,0 +1,127 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Detalle Pedido{% endblock %}
+
+{% block content %}
+
+<div class="erp-container">
+
+    <!-- ================= HEADER ================= -->
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">{{ pedido.numero }}</h1>
+            <p class="erp-subtitle">Detalle completo del pedido</p>
+        </div>
+
+        <div class="badge-status">
+            Estado: {{ pedido.estado }}
+        </div>
+
+    </div>
+
+    <!-- ================= GRID PRINCIPAL ================= -->
+    <div class="erp-grid">
+
+        <!-- CLIENTE -->
+        <div class="erp-card">
+
+            <h3>Cliente</h3>
+
+            <p><strong>Nombre:</strong> {{ pedido.cliente.nombre }}</p>
+            <p><strong>Teléfono:</strong> {{ pedido.cliente.telefono }}</p>
+            <p><strong>Dirección:</strong> {{ pedido.cliente.direccion }}</p>
+
+        </div>
+
+        <!-- RESUMEN -->
+        <div class="erp-card">
+
+            <h3>Resumen</h3>
+
+            <p><strong>Total:</strong> S/ {{ pedido.total }}</p>
+            <p><strong>Productos:</strong> {{ pedido.detalle|length }}</p>
+
+        </div>
+
+    </div>
+
+    <!-- ================= PRODUCTOS ================= -->
+    <div class="erp-card full">
+
+        <h3>Detalle de productos</h3>
+
+        <table class="erp-table">
+
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Cantidad</th>
+                    <th>Precio</th>
+                    <th>Subtotal</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for item in pedido.detalle %}
+                <tr>
+                    <td>{{ item.producto }}</td>
+                    <td>{{ item.cantidad }}</td>
+                    <td>S/ {{ item.precio_unitario }}</td>
+                    <td><strong>S/ {{ item.subtotal }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <!-- ================= ACCIONES ================= -->
+    <div class="erp-actions">
+
+        <a href="/admin/pedidos" class="btn-secondary">
+            ← Volver
+        </a>
+
+        <div class="erp-status-update">
+
+            <form method="POST" action="/admin/pedido/{{ pedido.id }}/estado">
+
+                <select name="estado" class="input">
+
+                    <option value="PENDIENTE" {% if pedido.estado=="PENDIENTE" %}selected{% endif %}>
+                        Pendiente
+                    </option>
+
+                    <option value="PREPARANDO" {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
+                        Preparando
+                    </option>
+
+                    <option value="LISTO" {% if pedido.estado=="LISTO" %}selected{% endif %}>
+                        Listo
+                    </option>
+
+                    <option value="EN_CAMINO" {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
+                        En camino
+                    </option>
+
+                    <option value="ENTREGADO" {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
+                        Entregado
+                    </option>
+
+                </select>
+
+                <button class="btn-primary" type="submit">
+                    Actualizar estado
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

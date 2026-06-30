@@ -1,0 +1,281 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Pedidos{% endblock %}
+
+{% block page_title %}
+Gestión de Pedidos
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= FILTROS ================= -->
+
+<div class="panel">
+
+    <form method="GET" action="/admin/pedidos" class="filters">
+
+        <input
+            type="text"
+            name="buscar"
+            class="input"
+            placeholder="🔍 Buscar pedido, cliente o teléfono..."
+            value="{{ buscar or '' }}">
+
+        <select name="estado" class="input">
+
+            <option value="">Todos los estados</option>
+
+            <option value="PENDIENTE" {% if estado=="PENDIENTE" %}selected{% endif %}>
+                Pendiente
+            </option>
+
+            <option value="PREPARANDO" {% if estado=="PREPARANDO" %}selected{% endif %}>
+                Preparando
+            </option>
+
+            <option value="LISTO" {% if estado=="LISTO" %}selected{% endif %}>
+                Listo
+            </option>
+
+            <option value="EN_CAMINO" {% if estado=="EN_CAMINO" %}selected{% endif %}>
+                En camino
+            </option>
+
+            <option value="ENTREGADO" {% if estado=="ENTREGADO" %}selected{% endif %}>
+                Entregado
+            </option>
+
+        </select>
+
+        <input
+            type="date"
+            name="desde"
+            class="input"
+            value="{{ desde or '' }}">
+
+        <input
+            type="date"
+            name="hasta"
+            class="input"
+            value="{{ hasta or '' }}">
+
+        <button class="btn-primary" type="submit">
+
+            Buscar
+
+        </button>
+
+        <a href="/admin/pedidos" class="btn-secondary">
+
+            Limpiar
+
+        </a>
+
+    </form>
+
+</div>
+
+{% if pedidos|length == 0 %}
+
+<div class="panel">
+
+    <h3>No se encontraron pedidos.</h3>
+
+</div>
+
+{% else %}
+
+<div class="orders-list">
+
+{% for pedido in pedidos %}
+
+<div class="order-card
+
+{% if pedido.estado=='PENDIENTE' %}
+pending
+{% elif pedido.estado=='PREPARANDO' %}
+preparing
+{% elif pedido.estado=='LISTO' %}
+ready
+{% elif pedido.estado=='EN_CAMINO' %}
+shipping
+{% else %}
+delivered
+{% endif %}
+
+">
+
+    <!-- CABECERA -->
+
+    <div class="order-header">
+
+        <div>
+
+            <h2>
+
+                {{ pedido.numero }}
+
+            </h2>
+
+            <span class="order-date">
+
+                {{ pedido.fecha }}
+
+            </span>
+
+        </div>
+
+        <div>
+
+            {% if pedido.estado=="PENDIENTE" %}
+
+                <span class="badge badge-yellow">
+
+                    Pendiente
+
+                </span>
+
+            {% elif pedido.estado=="PREPARANDO" %}
+
+                <span class="badge badge-blue">
+
+                    Preparando
+
+                </span>
+
+            {% elif pedido.estado=="LISTO" %}
+
+                <span class="badge badge-purple">
+
+                    Listo
+
+                </span>
+
+            {% elif pedido.estado=="EN_CAMINO" %}
+
+                <span class="badge badge-green">
+
+                    En camino
+
+                </span>
+
+            {% else %}
+
+                <span class="badge badge-gray">
+
+                    Entregado
+
+                </span>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- DATOS -->
+
+    <div class="order-info">
+
+        <div>
+
+            <strong>Cliente</strong>
+
+            <p>{{ pedido.cliente }}</p>
+
+        </div>
+
+        <div>
+
+            <strong>Teléfono</strong>
+
+            <p>{{ pedido.telefono }}</p>
+
+        </div>
+
+        <div>
+
+            <strong>Total</strong>
+
+            <p class="order-total">
+
+                S/ {{ "%.2f"|format(pedido.total) }}
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- ACCIONES -->
+
+    <div class="order-actions">
+
+        <form
+            method="POST"
+            action="/admin/pedido/{{ pedido.id }}/estado">
+
+            <select
+                name="estado"
+                class="input">
+
+                <option value="PENDIENTE"
+                {% if pedido.estado=="PENDIENTE" %}selected{% endif %}>
+                Pendiente
+                </option>
+
+                <option value="PREPARANDO"
+                {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
+                Preparando
+                </option>
+
+                <option value="LISTO"
+                {% if pedido.estado=="LISTO" %}selected{% endif %}>
+                Listo
+                </option>
+
+                <option value="EN_CAMINO"
+                {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
+                En camino
+                </option>
+
+                <option value="ENTREGADO"
+                {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
+                Entregado
+                </option>
+
+            </select>
+
+            <button
+                type="submit"
+                class="btn-primary">
+
+                Guardar estado
+
+            </button>
+
+        </form>
+
+        <a
+            href="/admin/pedido/{{ pedido.id }}"
+            class="detail-link">
+
+            Ver detalle →
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
+
+{% endblock %}

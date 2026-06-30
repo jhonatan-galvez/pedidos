@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title %}Panel Administrativo{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+<div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            🦋
+            <div>
+                <h2>Chiquilina</h2>
+                <span>Panel Administrativo</span>
+            </div>
+        </div>
+
+        <nav class="menu">
+
+            <a href="/admin/dashboard"
+               class="{% if request.path == '/admin/dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-chart-line"></i>
+                Dashboard
+            </a>
+
+            <a href="/admin/pedidos"
+               class="{% if request.path == '/admin/pedidos' %}active{% endif %}">
+                <i class="fa-solid fa-cart-shopping"></i>
+                Pedidos
+            </a>
+
+            <a href="/admin/productos"
+               class="{% if request.path == '/admin/productos' %}active{% endif %}">
+                <i class="fa-solid fa-box"></i>
+                Productos
+            </a>
+
+            <a href="/admin/clientes"
+               class="{% if request.path == '/admin/clientes' %}active{% endif %}">
+                <i class="fa-solid fa-users"></i>
+                Clientes
+            </a>
+
+            <a href="/admin/sincronizacion"
+               class="{% if request.path == '/admin/sincronizacion' %}active{% endif %}">
+                <i class="fa-solid fa-rotate"></i>
+                Sincronización
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+
+            <small>Versión 1.0</small>
+
+        </div>
+
+    </aside>
+
+    <!-- Contenido -->
+
+    <main class="content">
+
+        <header class="topbar">
+
+            <div>
+
+                <h1>{% block page_title %}Panel{% endblock %}</h1>
+
+                <span>Sistema de Pedidos</span>
+
+            </div>
+
+            <div class="topbar-right">
+
+                <i class="fa-regular fa-user"></i>
+
+                Administrador
+
+            </div>
+
+        </header>
+
+        {% block content %}
+        {% endblock %}
+
+    </main>
+
+</div>
+
+{% block extra_js %}{% endblock %}
+
+</body>
+</html>

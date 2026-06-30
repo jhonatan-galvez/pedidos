@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Confirmar pedido - Chiquilina 🦋</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="container nav">
+        <div class="logo">📚 Chiquilina 🦋</div>
+        <nav>
+            <a href="/">Inicio</a>
+            <a href="/catalogo">Catálogo</a>
+            <a class="active" href="/checkout">Confirmar pedido</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container checkout-layout">
+
+    <section class="checkout-form">
+        <h2>Datos de entrega</h2>
+        <p>Completa tus datos para confirmar el pedido.</p>
+
+        <input id="nombre" type="text" placeholder="Nombre completo">
+        <input id="telefono" type="text" placeholder="Teléfono / WhatsApp">
+        <input id="direccion" type="text" placeholder="Dirección">
+        <input id="referencia" type="text" placeholder="Referencia opcional">
+
+        <button id="btn-confirmar" class="btn-continuar">Confirmar pedido</button>
+
+    </section>
+
+    <aside class="checkout-resumen">
+        <h3>Resumen de tu pedido</h3>
+
+        <div id="resumen-items"></div>
+
+        <div class="cart-total">
+            <span>Subtotal</span>
+            <strong id="checkout-subtotal">S/ 0.00</strong>
+        </div>
+
+        <div class="cart-total">
+            <span>Delivery</span>
+            <strong>S/ 100.00</strong>
+        </div>
+
+        <div class="cart-total total-final">
+            <span>Total</span>
+            <strong id="checkout-total">S/ 0.00</strong>
+        </div>
+    </aside>
+
+    <script>
+    const btnConfirmar = document.getElementById("btn-confirmar");
+
+    btnConfirmar.addEventListener("click", async () => {
+
+        const datos = {
+
+            cliente:{
+
+                nombre:document.getElementById("nombre").value,
+
+                telefono:document.getElementById("telefono").value,
+
+                direccion:document.getElementById("direccion").value,
+
+                referencia:document.getElementById("referencia").value
+
+            },
+
+            carrito:carrito
+
+        };
+
+        const respuesta = await fetch("/crear_pedido",{
+
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json"
+            },
+
+            body:JSON.stringify(datos)
+
+        });
+
+        const resultado = await respuesta.json();
+
+        if(resultado.ok){
+
+            alert("Pedido registrado correctamente.\nNúmero: "+resultado.numero);
+
+            localStorage.removeItem("carrito");
+
+            window.location.href="/";
+
+        }else{
+
+            alert(resultado.error);
+
+        }
+
+    });
+    </script>
+
+
+</main>
+
+<script>
+let carrito = JSON.parse(localStorage.getItem("carrito")) || [];
+const resumenItems = document.getElementById("resumen-items");
+const subtotalHTML = document.getElementById("checkout-subtotal");
+const totalHTML = document.getElementById("checkout-total");
+const delivery = 100;
+
+let subtotal = 0;
+
+if (carrito.length === 0) {
+    resumenItems.innerHTML = "<p>No hay productos en el pedido.</p>";
+} else {
+    carrito.forEach(item => {
+        const totalItem = item.precio * item.cantidad;
+        subtotal += totalItem;
+
+        resumenItems.innerHTML += `
+            <div class="resumen-item">
+                <span>${item.producto} ${item.marca} x${item.cantidad}</span>
+                <strong>S/ ${totalItem.toFixed(2)}</strong>
+            </div>
+        `;
+    });
+}
+
+subtotalHTML.textContent = "S/ " + subtotal.toFixed(2);
+totalHTML.textContent = "S/ " + (subtotal + delivery).toFixed(2);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,258 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}
+Centro de Control
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= KPIs ================= -->
+
+<div class="cards">
+
+    <div class="card kpi pending">
+
+        <div class="kpi-header">
+            <i class="fa-solid fa-clock"></i>
+            <span>Pendientes</span>
+        </div>
+
+        <div class="card-value">
+            {{ data.estados.get('PENDIENTE',0) }}
+        </div>
+
+        <small>Pedidos por atender</small>
+
+    </div>
+
+    <div class="card kpi preparing">
+
+        <div class="kpi-header">
+            <i class="fa-solid fa-box-open"></i>
+            <span>Preparando</span>
+        </div>
+
+        <div class="card-value">
+            {{ data.estados.get('PREPARANDO',0) }}
+        </div>
+
+        <small>En preparación</small>
+
+    </div>
+
+    <div class="card kpi shipping">
+
+        <div class="kpi-header">
+            <i class="fa-solid fa-truck"></i>
+            <span>En Camino</span>
+        </div>
+
+        <div class="card-value">
+            {{ data.estados.get('EN_CAMINO',0) }}
+        </div>
+
+        <small>Reparto</small>
+
+    </div>
+
+    <div class="card kpi delivered">
+
+        <div class="kpi-header">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Entregados</span>
+        </div>
+
+        <div class="card-value">
+            {{ data.estados.get('ENTREGADO',0) }}
+        </div>
+
+        <small>Finalizados</small>
+
+    </div>
+
+</div>
+
+<!-- ================= GRID ================= -->
+
+<div class="dashboard-grid">
+
+    <!-- Ventas -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h2>
+                💰 Ventas del día
+            </h2>
+
+            <span>Hoy</span>
+
+        </div>
+
+        <div class="money">
+
+            S/ {{ "%.2f"|format(data.ventas_hoy) }}
+
+        </div>
+
+    </div>
+
+    <!-- Resumen -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+
+            <h2>
+
+                📋 Resumen
+
+            </h2>
+
+        </div>
+
+        <div class="summary-item">
+
+            <span>Total pedidos</span>
+
+            <strong>
+
+                {{ data.estados.values() | sum }}
+
+            </strong>
+
+        </div>
+
+        <div class="summary-item">
+
+            <span>Estados activos</span>
+
+            <strong>
+
+                {{ data.estados | length }}
+
+            </strong>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= TABLA ================= -->
+
+<div class="panel">
+
+    <div class="panel-title">
+
+        <h2>
+
+            📦 Últimos pedidos
+
+        </h2>
+
+    </div>
+
+    <table>
+
+        <thead>
+
+            <tr>
+
+                <th>Pedido</th>
+
+                <th>Cliente</th>
+
+                <th>Estado</th>
+
+                <th>Total</th>
+
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+        {% for p in data.ultimos %}
+
+            <tr>
+
+                <td>
+
+                    <strong>
+
+                        {{ p.numero }}
+
+                    </strong>
+
+                </td>
+
+                <td>
+
+                    {{ p.nombre }}
+
+                </td>
+
+                <td>
+
+                    {% if p.estado=="PENDIENTE" %}
+
+                        <span class="badge badge-yellow">
+
+                            Pendiente
+
+                        </span>
+
+                    {% elif p.estado=="PREPARANDO" %}
+
+                        <span class="badge badge-blue">
+
+                            Preparando
+
+                        </span>
+
+                    {% elif p.estado=="EN_CAMINO" %}
+
+                        <span class="badge badge-green">
+
+                            En Camino
+
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge badge-gray">
+
+                            Entregado
+
+                        </span>
+
+                    {% endif %}
+
+                </td>
+
+                <td>
+
+                    <strong>
+
+                        S/ {{ "%.2f"|format(p.total) }}
+
+                    </strong>
+
+                </td>
+
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
