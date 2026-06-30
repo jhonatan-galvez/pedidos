@@ -11,7 +11,9 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
 
 UPLOAD_FOLDER = "upload"
+
 app = Flask(__name__)
+inicializar_database()
 
 ####################################
 # SITIO PUBLICO - CLIENTE
@@ -171,7 +173,7 @@ def upload_excel():
 
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-    nombre = secure_filename("base.xlsx")
+    nombre = secure_filename("productos.xlsx")
 
     ruta = os.path.join(UPLOAD_FOLDER, nombre)
 
