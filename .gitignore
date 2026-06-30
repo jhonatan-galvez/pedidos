@@ -9,7 +9,5 @@ venv/
 .DS_Store
 Thumbs.db
 
-database/*.db
-
 uploads/base.xlsx
 uploads/*.xlsx
