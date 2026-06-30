@@ -2,9 +2,15 @@ import pandas as pd
 import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-ARCHIVO = os.path.join(BASE_DIR, "upload", "productos.xlsx")
+UPLOAD_DIR = os.path.join(BASE_DIR, "upload")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+ARCHIVO = os.path.join(UPLOAD_DIR, "productos.xlsx")
 
 def leer_excel():
+
+    if not os.path.exists(ARCHIVO):
+        raise FileNotFoundError("No existe el Excel subido aún")
 
     df = pd.read_excel(
         ARCHIVO,
