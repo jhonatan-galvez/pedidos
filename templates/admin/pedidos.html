@@ -33,10 +33,6 @@ Gestión de Pedidos
                 Preparando
             </option>
 
-            <option value="LISTO" {% if estado=="LISTO" %}selected{% endif %}>
-                Listo
-            </option>
-
             <option value="EN_CAMINO" {% if estado=="EN_CAMINO" %}selected{% endif %}>
                 En camino
             </option>
@@ -221,11 +217,6 @@ delivered
                 <option value="PREPARANDO"
                 {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
                 Preparando
-                </option>
-
-                <option value="LISTO"
-                {% if pedido.estado=="LISTO" %}selected{% endif %}>
-                Listo
                 </option>
 
                 <option value="EN_CAMINO"
