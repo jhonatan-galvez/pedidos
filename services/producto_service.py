@@ -11,6 +11,7 @@ def _map_productos(rows):
             "presentacion": r["presentacion"],
             "stock": r["stock"],
             "precio": r["precio"],
+            "imagen": r["imagen"],
         }
         for r in rows
     ]
@@ -21,7 +22,7 @@ def obtener_productos():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE activo = 1
     """)
@@ -37,7 +38,7 @@ def buscar_por_codigo(codigo):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE codigo = ? AND activo = 1
     """, (codigo,))
@@ -53,7 +54,7 @@ def buscar_por_nombre(nombre):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE producto LIKE ? AND activo = 1
     """, (f"%{nombre}%",))
@@ -69,7 +70,7 @@ def buscar_por_marca(marca):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE marca LIKE ? AND activo = 1
     """, (f"%{marca}%",))
@@ -85,7 +86,7 @@ def productos_sin_stock():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE stock <= 0 AND activo = 1
     """)
@@ -101,7 +102,7 @@ def productos_bajo_stock(minimo=5):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio, imagen
         FROM productos
         WHERE stock <= ? AND activo = 1
     """, (minimo,))
@@ -110,6 +111,23 @@ def productos_bajo_stock(minimo=5):
     conn.close()
 
     return _map_productos(rows)
+
+def actualizar_imagen_producto(producto_id, nombre_imagen):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE productos
+        SET imagen = ?
+        WHERE id = ?
+    """, (
+        nombre_imagen,
+        producto_id
+    ))
+
+    conn.commit()
+    conn.close()    
 
 # =========================
 # OBTENER PRODUCTOS

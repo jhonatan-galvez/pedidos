@@ -1,19 +1,14 @@
 import pandas as pd
 import os
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-UPLOAD_DIR = os.path.join(BASE_DIR, "upload")
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-ARCHIVO = os.path.join(UPLOAD_DIR, "productos.xlsx")
+from config import EXCEL_PATH
 
 def leer_excel():
 
-    if not os.path.exists(ARCHIVO):
+    if not os.path.exists(EXCEL_PATH):
         raise FileNotFoundError("No existe el Excel subido aún")
 
     df = pd.read_excel(
-        ARCHIVO,
+        EXCEL_PATH,
         header=None,
         skiprows=4,
         dtype={1: str}      # La columna Código se lee como texto

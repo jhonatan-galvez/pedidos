@@ -26,6 +26,18 @@
         {% for p in productos %}
 
         <div class="product-card">
+            <div class="product-image">
+
+                {% if p.imagen %}
+                    <img 
+                    src="{{ url_for('static', filename='img/productos/' + p.imagen) }}"
+                    alt="{{ p.producto }}">
+                {% else %}
+                    <img 
+                    src="{{ url_for('static', filename='img/productos/SIN_IMAGEN.jpg') }}"
+                    alt="Sin imagen">
+                {% endif %}
+            </div>
 
             <!-- HEADER -->
             <div class="product-header">
@@ -66,6 +78,10 @@
 
                 <a href="/admin/productos/editar/{{ p.id }}" class="btn-secondary">
                     Editar
+                </a>
+
+                <a href="/admin/productos/imagen/{{ p.id }}" class="btn-secondary">
+                    🖼 Imagen
                 </a>
 
             </div>

@@ -1,8 +1,12 @@
+from services.producto_service import actualizar_imagen_producto
+from werkzeug.utils import secure_filename
 from services.database_service import inicializar_database
+from services.database_service import conectar
 from services.producto_service import obtener_productos, obtener_admproductos
 from services.pedido_service import crear_pedido, obtener_pedidos, obtener_pedido_completo, actualizar_estado_pedido, obtener_dashboard
 from services.sync_service import sincronizar_productos
 from werkzeug.utils import secure_filename
+from config import UPLOAD_FOLDER, EXCEL_NAME
 from services.sync_log_service import (
     obtener_ultima_sincronizacion,
     obtener_historial
@@ -10,7 +14,16 @@ from services.sync_log_service import (
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
 
-UPLOAD_FOLDER = "upload"
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PRODUCT_IMAGE_FOLDER = os.path.join(
+    BASE_DIR,
+    "static",
+    "img",
+    "productos"
+)
 
 app = Flask(__name__)
 inicializar_database()
@@ -30,6 +43,81 @@ def catalogo():
 @app.route("/checkout")
 def checkout():
     return render_template("checkout.html")
+
+#@app.route("/admin/productos/imagen/<int:id>", methods=["GET","POST"])
+#def subir_imagen_producto(id):
+
+    if request.method == "POST":
+
+        archivo = request.files["imagen"]
+
+        nombre = secure_filename(archivo.filename)
+        os.makedirs(PRODUCT_IMAGE_FOLDER, exist_ok=True)
+
+        ruta = os.path.join(
+            PRODUCT_IMAGE_FOLDER,
+            nombre
+        )
+
+        archivo.save(ruta)
+
+
+        conn = conectar()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        UPDATE productos
+        SET imagen=?,
+            imagen_manual=1
+        WHERE id=?
+        """,
+        (
+            nombre,
+            id
+        ))
+
+        conn.commit()
+        conn.close()
+
+        return redirect("/admin/productos")
+
+
+    return render_template(
+        "admin/subir_imagen.html",
+        id=id
+    )
+
+@app.route("/admin/productos/imagen/<int:id>", methods=["GET","POST"])
+def imagen_producto(id):
+
+    if request.method == "POST":
+
+        archivo = request.files.get("imagen")
+
+        if archivo:
+
+            nombre = secure_filename(archivo.filename)
+            os.makedirs(PRODUCT_IMAGE_FOLDER, exist_ok=True)
+
+            ruta = os.path.join(
+                PRODUCT_IMAGE_FOLDER,
+                nombre
+            )
+
+            archivo.save(ruta)
+
+            actualizar_imagen_producto(
+                id,
+                nombre
+            )
+
+            return redirect("/admin/productos")
+
+
+    return render_template(
+        "admin/imagen_producto.html",
+        id=id
+    )
 
 @app.post("/crear_pedido")
 def crear_pedido_route():
@@ -173,7 +261,7 @@ def upload_excel():
 
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-    nombre = secure_filename("productos.xlsx")
+    nombre = secure_filename(EXCEL_NAME)
 
     ruta = os.path.join(UPLOAD_FOLDER, nombre)
 

@@ -36,7 +36,12 @@
 
             {% for producto in productos %}
             <div class="product-card" data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }}">
-                <div class="product-img">📦</div>
+                <img
+                    src="{{ url_for('static',
+                        filename='img/productos/' + producto.imagen) }}"
+                    class="product-img"
+                    alt="{{ producto.producto }}"
+                >
 
                 <h3>{{ producto.producto }}</h3>
 

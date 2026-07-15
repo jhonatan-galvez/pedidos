@@ -11,3 +11,5 @@ Thumbs.db
 
 uploads/base.xlsx
 uploads/*.xlsx
+
+.env

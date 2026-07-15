@@ -1,8 +1,46 @@
+import os
 from services.excel_service import leer_excel
 from services.database_service import conectar
 from services.sync_log_service import guardar_log
 import time
 from datetime import datetime
+
+# Carpeta donde estarán las imágenes
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+CARPETA_IMAGENES = os.path.join(
+    BASE_DIR,
+    "static",
+    "img",
+    "productos"
+)
+
+# Extensiones permitidas
+EXTENSIONES = [".jpg", ".jpeg", ".png", ".webp"]
+
+
+def obtener_imagen_producto(codigo):
+    """
+    Busca automáticamente la imagen del producto
+    según su código.
+    """
+
+    codigo = str(codigo).strip()
+
+    for extension in EXTENSIONES:
+
+        nombre_archivo = codigo + extension
+
+        ruta = os.path.join(
+            CARPETA_IMAGENES,
+            nombre_archivo
+        )
+        #print("Buscando:", ruta)
+        #print("Existe:", os.path.exists(ruta))
+        if os.path.exists(ruta):
+            return nombre_archivo
+
+    return "SIN_IMAGEN.jpg"
 
 def sincronizar_productos():
     inicio = time.perf_counter()
@@ -22,6 +60,8 @@ def sincronizar_productos():
     for _, row in df.iterrows():
         productos_leidos += 1
         codigo = str(row["codigo"]).strip()
+        imagen = obtener_imagen_producto(codigo)
+        print(f"{codigo} -> {imagen}")
         codigos_excel.add(codigo)
         cursor.execute("""
             SELECT
@@ -30,7 +70,8 @@ def sincronizar_productos():
                 tipo,
                 presentacion,
                 stock,
-                precio
+                precio,
+                imagen
             FROM productos
             WHERE codigo = ?
         """, (codigo,))
@@ -41,8 +82,8 @@ def sincronizar_productos():
         if not resultado:
             cursor.execute("""
                 INSERT INTO productos
-                (codigo, producto, marca, tipo, presentacion, stock, precio, activo)
-                VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                (codigo, producto, marca, tipo, presentacion, stock, precio, imagen, activo)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)
             """, (
                 codigo,
                 row["producto"],
@@ -50,7 +91,8 @@ def sincronizar_productos():
                 row["tipo"],
                 row["presentacion"],
                 int(row["stock"]),
-                float(row["precio"])
+                float(row["precio"]),
+                imagen
             ))
             nuevos += 1
 
@@ -65,7 +107,6 @@ def sincronizar_productos():
                 resultado["stock"] == int(row["stock"]) and
                 resultado["precio"] == float(row["precio"])
             ):
-
                 sin_cambios += 1
 
             else:
@@ -82,7 +123,6 @@ def sincronizar_productos():
                         activo = 1
                     WHERE codigo = ?
                 """, (
-
                     row["producto"],
                     row["marca"],
                     row["tipo"],
