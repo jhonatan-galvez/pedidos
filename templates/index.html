@@ -9,7 +9,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
@@ -39,29 +38,59 @@
     </div>
 </header>
 
-<section class="hero-desktop">
+<<section class="hero-desktop">
+
     <div class="container hero-grid">
-        <div>
-            <h1>Haz tu pedido sin llamadas ni esperas</h1>
+
+        <div class="hero-content">
+
+            <h1>
+                Todo lo que necesitas para mantener
+                tu hogar limpio y desinfectado.
+            </h1>
+
             <p>
-                Selecciona tus productos,
-                revísalos en el carrito
-                y envía tu pedido fácilmente.
+                Compra desde cualquier lugar de forma rápida y segura.
+                Agrega tus productos al carrito y envía tu pedido en pocos minutos.
             </p>
-            <a href="/catalogo" class="btn-primary">Ver catálogo</a>
+
+            <div class="hero-beneficios">
+
+                <div>✔ Productos originales</div>
+
+                <div>✔ Atención personalizada</div>
+
+                <div>✔ Atención rápida</div>
+
+            </div>
+
+            <div class="hero-buttons">
+
+                <a href="/catalogo" class="btn-primary">
+                    Ver catálogo
+                </a>
+
+                <a href="https://wa.me/51980401073"
+                   class="btn-secondary">
+
+                    💬 Contactar
+
+                </a>
+
+            </div>
+
         </div>
 
-        <div class="hero-card">
-            <h3>Experiencia de compra</h3>
-            <p>
-                Realiza tus pedidos desde cualquier lugar.<br><br>
-                ✓ Catálogo actualizado<br>
-                ✓ Confirmación del pedido<br>
-                ✓ Atención rápida
-            </p>
-            <span>Disponible las 24 horas</span>
+        <div class="hero-image">
+
+            <img
+                src="{{ url_for('static', filename='img/logo.png') }}"
+                alt="Doña Flori">
+
         </div>
+
     </div>
+
 </section>
 
 </body>

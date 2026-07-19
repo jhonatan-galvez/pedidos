@@ -5,7 +5,7 @@
 body{
     margin:0;
     font-family:'Poppins',sans-serif;
-    background:#f4f7fb;
+    background:#faf4de;
     color:#17212f;
 }
 
@@ -107,8 +107,6 @@ nav a:hover{
 
     gap:10px;
 
-    margin-top:30px;
-
     background:#1d6ef0;
 
     color:white;
@@ -127,6 +125,13 @@ nav a:hover{
 
     box-shadow:0 10px 20px rgba(29,110,240,.25);
 
+}
+
+.hero-buttons{
+    display:flex;
+    align-items:center;
+    gap:25px;
+    margin-top:30px;
 }
 
 .btn-primary:hover{

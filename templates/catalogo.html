@@ -2,16 +2,34 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Catálogo - Chiquilina 🦋</title>
+    <title>Doña Flori | Catalogo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet"
-    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
 
 <header class="header">
     <div class="container nav">
-        <div class="logo">📚 Chiquilina 🦋</div>
+        <div class="logo">
+
+            <img
+                src="{{ url_for('static', filename='img/logo.png') }}"
+                alt="Doña Flori"
+                class="logo-img">
+
+            <div class="logo-text">
+
+                <strong>DOÑA FLORI</strong>
+
+                <span>Productos de limpieza para el hogar</span>
+
+            </div>
+
+        </div>
         <nav>
             <a href="/">Inicio</a>
             <a class="active" href="/catalogo">Catálogo</a>
