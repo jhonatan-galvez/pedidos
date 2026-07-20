@@ -988,3 +988,33 @@ table tbody tr:hover{
         grid-template-columns: 1fr;
     }
 }
+
+.logo{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:20px;
+}
+
+.logo-img{
+    width:60px;
+    height:60px;
+    border-radius:50%;
+    object-fit:cover;
+}
+
+.logo-text{
+    display:flex;
+    flex-direction:column;
+}
+
+.logo-text strong{
+    font-size:20px;
+    color:#fff;
+    font-weight:700;
+}
+
+.logo-text span{
+    font-size:15px;
+    color:#94a3b8;
+}

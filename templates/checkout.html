@@ -2,14 +2,31 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Confirmar pedido - Chiquilina 🦋</title>
+    <title>Doña Flori | Confirmar Pedido</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
 <header class="header">
     <div class="container nav">
-        <div class="logo">📚 Chiquilina 🦋</div>
+        <div class="logo">
+
+            <img
+                src="{{ url_for('static', filename='img/logo.png') }}"
+                alt="Doña Flori"
+                class="logo-img">
+
+            <div class="logo-text">
+
+                <strong>DOÑA FLORI</strong>
+
+                <span>Productos de limpieza para el hogar</span>
+
+            </div>
+        </div>
         <nav>
             <a href="/">Inicio</a>
             <a href="/catalogo">Catálogo</a>
@@ -45,13 +62,23 @@
 
         <div class="cart-total">
             <span>Delivery</span>
-            <strong>S/ 100.00</strong>
+            <strong id="checkout-delivery">S/ 0.00</strong>
+        </div>
+
+        <div class="cart-total promocion">
+            <span>Promoción de lanzamiento</span>
+            <strong id="checkout-promocion">-S/ 0.00</strong>
         </div>
 
         <div class="cart-total total-final">
             <span>Total</span>
             <strong id="checkout-total">S/ 0.00</strong>
         </div>
+
+        <p class="promo-info">
+        🚚 ¡Envío gratis por tiempo limitado!
+        </p>
+
     </aside>
 
     <script>
@@ -116,7 +143,11 @@ let carrito = JSON.parse(localStorage.getItem("carrito")) || [];
 const resumenItems = document.getElementById("resumen-items");
 const subtotalHTML = document.getElementById("checkout-subtotal");
 const totalHTML = document.getElementById("checkout-total");
-const delivery = 100;
+const delivery = 10;
+
+// Activar o desactivar promoción
+const promocionActiva = true;
+const descuento = promocionActiva ? delivery : 0;
 
 let subtotal = 0;
 
@@ -137,7 +168,16 @@ if (carrito.length === 0) {
 }
 
 subtotalHTML.textContent = "S/ " + subtotal.toFixed(2);
-totalHTML.textContent = "S/ " + (subtotal + delivery).toFixed(2);
+
+document.getElementById("checkout-delivery").textContent =
+    "S/ " + delivery.toFixed(2);
+
+document.getElementById("checkout-promocion").textContent =
+    "-S/ " + descuento.toFixed(2);
+
+totalHTML.textContent =
+    "S/ " + (subtotal + delivery - descuento).toFixed(2);
+
 </script>
 
 </body>

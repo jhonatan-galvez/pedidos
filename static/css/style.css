@@ -57,7 +57,7 @@ nav a:hover{
 
 .hero-desktop{
 
-    padding:60px 0 80px;
+    padding:10px 0 80px;
 
 }
 
@@ -130,8 +130,8 @@ nav a:hover{
 .hero-buttons{
     display:flex;
     align-items:center;
-    gap:25px;
-    margin-top:30px;
+    gap:45px;
+    margin-top:50px;
 }
 
 .btn-primary:hover{
@@ -477,11 +477,27 @@ nav a:hover{
 }
 
 .logo-text span{
-
     font-size:11px;
-
     color:#9eb3c9;
-
     font-weight:500;
+}
 
+.promocion{
+    color:#16a34a;
+    font-weight:600;
+}
+
+.promocion strong{
+    color:#16a34a;
+}
+
+.promo-info{
+    margin-top:15px;
+    padding:12px;
+    background:#ECFDF5;
+    color:#15803D;
+    border-radius:10px;
+    font-size:14px;
+    text-align:center;
+    font-weight:500;
 }
