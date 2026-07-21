@@ -30,12 +30,13 @@
 
                 {% if p.imagen %}
                     <img 
-                    src="{{ producto.imagen }}"
+                    src="{{ p.imagen }}"
                     class="product-img"
-                    alt="{{ producto.producto }}">
+                    alt="{{ p.producto }}">
                 {% else %}
                     <img 
                     src="{{ url_for('static', filename='img/productos/SIN_IMAGEN.jpg') }}"
+                    class="product-img"
                     alt="Sin imagen">
                 {% endif %}
             </div>
