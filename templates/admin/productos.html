@@ -28,18 +28,28 @@
         <div class="product-card">
             <div class="product-image">
 
-                {% if p.imagen %}
-                    <img 
-                    src="{{ p.imagen }}"
-                    class="product-img"
-                    alt="{{ p.producto }}">
+            {% if p.imagen %}
+
+                {% if p.imagen.startswith("http") %}
+                    <img
+                        src="{{ p.imagen }}"
+                        class="product-img"
+                        alt="{{ p.producto }}">
                 {% else %}
-                    <img 
+                    <img
+                        src="{{ url_for('static', filename='img/productos/' + p.imagen) }}"
+                        class="product-img"
+                        alt="{{ p.producto }}">
+                {% endif %}
+
+            {% else %}
+
+                <img
                     src="{{ url_for('static', filename='img/productos/SIN_IMAGEN.jpg') }}"
                     class="product-img"
                     alt="Sin imagen">
-                {% endif %}
-            </div>
+
+            {% endif %}
 
             <!-- HEADER -->
             <div class="product-header">
