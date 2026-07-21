@@ -52,12 +52,31 @@
 
             {% for producto in productos %}
             <div class="product-card" data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }}">
-                <img
-                    src="{{ producto.imagen }}"
-                    class="product-img"
-                    alt="{{ producto.producto }}"
-                    loading="lazy"
-                >
+                {% if producto.imagen %}
+
+                    {% if producto.imagen.startswith("http") %}
+                        <img
+                            src="{{ producto.imagen }}"
+                            class="product-img"
+                            alt="{{ producto.producto }}"
+                            loading="lazy">
+                    {% else %}
+                        <img
+                            src="{{ url_for('static', filename='img/productos/' + producto.imagen) }}"
+                            class="product-img"
+                            alt="{{ producto.producto }}"
+                            loading="lazy">
+                    {% endif %}
+
+                {% else %}
+
+                    <img
+                        src="{{ url_for('static', filename='img/productos/SIN_IMAGEN.jpg') }}"
+                        class="product-img"
+                        alt="Sin imagen"
+                        loading="lazy">
+
+                {% endif %}
 
                 <h3>{{ producto.producto }}</h3>
 
