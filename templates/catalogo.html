@@ -53,10 +53,10 @@
             {% for producto in productos %}
             <div class="product-card" data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }}">
                 <img
-                    src="{{ url_for('static',
-                        filename='img/productos/' + producto.imagen) }}"
+                    src="{{ producto.imagen }}"
                     class="product-img"
                     alt="{{ producto.producto }}"
+                    loading="lazy"
                 >
 
                 <h3>{{ producto.producto }}</h3>

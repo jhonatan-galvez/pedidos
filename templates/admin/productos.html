@@ -30,8 +30,9 @@
 
                 {% if p.imagen %}
                     <img 
-                    src="{{ url_for('static', filename='img/productos/' + p.imagen) }}"
-                    alt="{{ p.producto }}">
+                    src="{{ producto.imagen }}"
+                    class="product-img"
+                    alt="{{ producto.producto }}">
                 {% else %}
                     <img 
                     src="{{ url_for('static', filename='img/productos/SIN_IMAGEN.jpg') }}"
@@ -81,7 +82,7 @@
                 </a>
 
                 <a href="/admin/productos/imagen/{{ p.id }}" class="btn-secondary">
-                    🖼 Imagen
+                    🖼️ Imagen
                 </a>
 
             </div>

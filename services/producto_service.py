@@ -149,7 +149,7 @@ def obtener_admproductos(activo=None):
         sql += " AND activo = ?"
         params.append(activo)
 
-    sql += " ORDER BY id DESC"
+    sql += " ORDER BY id"
 
     cursor.execute(sql, params)
     rows = cursor.fetchall()

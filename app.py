@@ -1,5 +1,6 @@
 from services.producto_service import actualizar_imagen_producto
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
 from services.database_service import inicializar_database
 from services.database_service import conectar
 from services.producto_service import obtener_productos, obtener_admproductos
@@ -7,12 +8,15 @@ from services.pedido_service import crear_pedido, obtener_pedidos, obtener_pedid
 from services.sync_service import sincronizar_productos
 from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
-from services.sync_log_service import (
-    obtener_ultima_sincronizacion,
-    obtener_historial
-)
+from services.sync_log_service import (obtener_ultima_sincronizacion,
+    obtener_historial)
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
+import zipfile
+from flask import send_file
+from services.cloudinary_service import subir_imagen
+
+
 
 
 
@@ -24,6 +28,8 @@ PRODUCT_IMAGE_FOLDER = os.path.join(
     "img",
     "productos"
 )
+
+load_dotenv()
 
 app = Flask(__name__)
 inicializar_database()
@@ -44,48 +50,6 @@ def catalogo():
 def checkout():
     return render_template("checkout.html")
 
-#@app.route("/admin/productos/imagen/<int:id>", methods=["GET","POST"])
-#def subir_imagen_producto(id):
-
-    if request.method == "POST":
-
-        archivo = request.files["imagen"]
-
-        nombre = secure_filename(archivo.filename)
-        os.makedirs(PRODUCT_IMAGE_FOLDER, exist_ok=True)
-
-        ruta = os.path.join(
-            PRODUCT_IMAGE_FOLDER,
-            nombre
-        )
-
-        archivo.save(ruta)
-
-
-        conn = conectar()
-        cursor = conn.cursor()
-
-        cursor.execute("""
-        UPDATE productos
-        SET imagen=?,
-            imagen_manual=1
-        WHERE id=?
-        """,
-        (
-            nombre,
-            id
-        ))
-
-        conn.commit()
-        conn.close()
-
-        return redirect("/admin/productos")
-
-
-    return render_template(
-        "admin/subir_imagen.html",
-        id=id
-    )
 
 @app.route("/admin/productos/imagen/<int:id>", methods=["GET","POST"])
 def imagen_producto(id):
@@ -96,19 +60,11 @@ def imagen_producto(id):
 
         if archivo:
 
-            nombre = secure_filename(archivo.filename)
-            os.makedirs(PRODUCT_IMAGE_FOLDER, exist_ok=True)
-
-            ruta = os.path.join(
-                PRODUCT_IMAGE_FOLDER,
-                nombre
-            )
-
-            archivo.save(ruta)
+            url_imagen = subir_imagen(archivo)
 
             actualizar_imagen_producto(
                 id,
-                nombre
+                url_imagen
             )
 
             return redirect("/admin/productos")
@@ -117,6 +73,35 @@ def imagen_producto(id):
     return render_template(
         "admin/imagen_producto.html",
         id=id
+    )
+
+@app.route("/admin/backup-imagenes")
+def backup_imagenes():
+
+    carpeta = PRODUCT_IMAGE_FOLDER
+
+    if not os.path.exists(carpeta):
+        return "La carpeta de imágenes no existe."
+
+    zip_path = os.path.join(BASE_DIR, "backup_imagenes.zip")
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+
+        for archivo in os.listdir(carpeta):
+
+            ruta = os.path.join(carpeta, archivo)
+
+            if os.path.isfile(ruta):
+
+                zipf.write(
+                    ruta,
+                    arcname=archivo
+                )
+
+    return send_file(
+        zip_path,
+        as_attachment=True,
+        download_name="backup_imagenes.zip"
     )
 
 @app.post("/crear_pedido")
@@ -141,7 +126,6 @@ def crear_pedido_route():
             "ok": False,
             "error": str(e)
         }), 500
-
 
 
 '''@app.route("/pedidos", methods=["GET"])
