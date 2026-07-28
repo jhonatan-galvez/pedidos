@@ -16,6 +16,14 @@ import zipfile
 from flask import send_file
 from services.cloudinary_service import subir_imagen
 
+from services.ticket_service import generar_ticket, Ticket
+from routes.ticket_routes import ticket_bp
+from services.impresora_service import imprimir_ticket
+from services.whatsapp_service import enviar_ticket_por_whatsapp, enviar_confirmacion_pedido
+from services.pedido_service import obtener_pedido_completo
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -32,6 +40,7 @@ PRODUCT_IMAGE_FOLDER = os.path.join(
 load_dotenv()
 
 app = Flask(__name__)
+app.register_blueprint(ticket_bp)
 inicializar_database()
 
 ####################################
@@ -259,10 +268,134 @@ def upload_excel():
         "resultado": resultado
     })
 
+
 #if __name__ == "__main__":
 #    inicializar_database()
 #    app.run(debug=True)
 
+@app.post("/api/ticket/<int:pedido_id>")
+def api_generar_ticket(pedido_id):
+    """Genera un ticket en objeto para usarlo internamente"""
+    try:
+        ticket = generar_ticket(pedido_id)
+        
+        if ticket is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        return jsonify({
+            "ok": True,
+            "numero_pedido": ticket.numero_pedido,
+            "contenido": ticket.generar_ticket_pos()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generando ticket: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+
+@app.post("/admin/ticket/<int:pedido_id>/imprimir")
+def imprimir_ticket_route(pedido_id):
+    """Imprime el ticket en la Epson T20II"""
+    try:
+        ticket = generar_ticket(pedido_id)
+        
+        if ticket is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        exito = imprimir_ticket(ticket)
+        
+        if exito:
+            return jsonify({
+                "ok": True,
+                "mensaje": f"Ticket {ticket.numero_pedido} impreso"
+            })
+        else:
+            return jsonify({
+                "ok": False,
+                "error": "No se pudo imprimir el ticket (impresora no disponible)"
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error imprimiendo: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+
+@app.post("/admin/ticket/<int:pedido_id>/whatsapp")
+def enviar_ticket_whatsapp(pedido_id):
+    """Envía el ticket por WhatsApp"""
+    try:
+        pedido = obtener_pedido_completo(pedido_id)
+        
+        if pedido is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        ticket = generar_ticket(pedido_id)
+        numero = pedido["cliente"]["telefono"]
+        
+        # Generar el mensaje
+        contenido = ticket.generar_ticket_pos()
+        mensaje = f"```\n{contenido}\n```"
+        
+        # Mostrar en logs
+        print("\n" + "="*50)
+        print(f"📱 MENSAJE WHATSAPP para {numero}:")
+        print("="*50)
+        print(mensaje)
+        print("="*50 + "\n")
+        
+        # Intentar enviar
+        try:
+            enviar_ticket_por_whatsapp(numero, ticket)
+            return jsonify({
+                "ok": True,
+                "mensaje": f"Ticket enviado a {numero}",
+                "preview": mensaje
+            })
+        except Exception as e:
+            return jsonify({
+                "ok": False,
+                "error": f"No se pudo enviar: {str(e)}",
+                "preview": mensaje
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error enviando WhatsApp: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/admin/ticket/<int:pedido_id>")
+def ticket_preview(pedido_id):
+
+    pedido = obtener_pedido_completo(pedido_id)
+
+    ticket = Ticket(pedido)
+
+    return render_template(
+        "admin/ticket_preview.html",
+        ticket=ticket,
+        pedido_id=pedido_id
+    )
+    
+#ticket = generar_ticket(4)
+#print(ticket.productos)
+#print(ticket.generar_ticket_pos())
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

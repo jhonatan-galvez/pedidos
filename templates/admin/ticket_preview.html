@@ -1,0 +1,231 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Vista previa del Ticket{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2>Vista previa del Ticket</h2>
+            <p class="text-muted">
+                Pedido {{ ticket.numero_pedido }}
+            </p>
+        </div>
+
+        <div style="margin-top:10px;"></div>
+
+        <div class="button-group" style="display: flex; gap: 10px;">
+
+            <button
+                class="btn btn-primary"
+                id="btnImprimir"
+                onclick="imprimirTicket()">
+
+                Imprimir
+
+            </button>
+
+            <button
+                class="btn btn-primary"
+                id="btnWhatsapp"
+                onclick="enviarWhatsapp()">
+
+                WhatsApp
+
+            </button>
+
+            <a
+                href="/admin/pedidos"
+                class="btn btn-secondary">
+
+                ← Volver
+
+            </a>
+
+        </div>
+
+    </div>
+
+
+    <div style="margin-top:40px;"></div>
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <pre id="ticket"
+style="
+font-family: 'Courier New', monospace;
+font-size:14px;
+white-space:pre-wrap;
+margin:0;
+background: #f5f5f5;
+padding: 20px;
+border-radius: 8px;
+line-height: 1.5;
+">{{ ticket.generar_ticket_pos() }}</pre>
+
+
+        </div>
+ 
+    </div>
+ 
+    <!-- Notificación de estado -->
+    <div id="notification" style="
+display: none;
+position: fixed;
+top: 20px;
+right: 20px;
+padding: 15px 20px;
+border-radius: 8px;
+color: white;
+font-weight: 600;
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+z-index: 9999;
+animation: slideIn 0.3s ease;
+">
+    </div>
+ 
+</div>
+ 
+<style>
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+ 
+    .button-disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+ 
+    .button-success {
+        animation: pulse 0.5s ease;
+    }
+ 
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+        50% {
+            transform: scale(0.95);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+</style>
+ 
+<script>
+ 
+// Función auxiliar para mostrar notificaciones
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const notification = document.getElementById('notification');
+    
+    notification.textContent = mensaje;
+    notification.style.display = 'block';
+    
+    // Colores según tipo
+    if (tipo === 'success') {
+        notification.style.background = '#10b981';
+    } else if (tipo === 'error') {
+        notification.style.background = '#ef4444';
+    } else if (tipo === 'info') {
+        notification.style.background = '#3b82f6';
+    }
+    
+    // Desaparecer después de 4 segundos
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 4000);
+}
+ 
+// Función para imprimir
+async function imprimirTicket() {
+    const btn = document.getElementById('btnImprimir');
+    
+    try {
+        // Deshabilitar botón mientras se procesa
+        btn.disabled = true;
+        btn.classList.add('button-disabled');
+        btn.textContent = '⏳ Imprimiendo...';
+        
+        const respuesta = await fetch(
+            "/admin/ticket/{{ pedido_id }}/imprimir",
+            { method: "POST" }
+        );
+ 
+        const data = await respuesta.json();
+ 
+        if (data.ok) {
+            mostrarNotificacion('✓ Ticket impreso correctamente', 'success');
+            btn.classList.add('button-success');
+        } else {
+            mostrarNotificacion('✗ ' + data.error, 'error');
+        }
+ 
+    } catch (error) {
+        mostrarNotificacion('✗ Error: ' + error.message, 'error');
+    } finally {
+        // Restaurar botón
+        btn.disabled = false;
+        btn.classList.remove('button-disabled');
+        btn.textContent = 'Imprimir';
+    }
+}
+ 
+ 
+// Función para enviar por WhatsApp
+async function enviarWhatsapp() {
+    const btn = document.getElementById('btnWhatsapp');
+    
+    try {
+        btn.disabled = true;
+        btn.textContent = '⏳ Preparando...';
+        
+        const respuesta = await fetch(
+            "/admin/ticket/{{ pedido_id }}/whatsapp",
+            { method: "POST" }
+        );
+
+        const data = await respuesta.json();
+
+        if (data.ok) {
+            mostrarNotificacion('✓ Ticket enviado por WhatsApp', 'success');
+            
+            // ← NUEVO: Mostrar el mensaje enviado
+            if (data.preview) {
+                console.log('📱 Mensaje enviado:\n' + data.preview);
+                // Opcional: Mostrar en un modal
+                alert('Mensaje enviado:\n\n' + data.preview);
+            }
+        } else {
+            mostrarNotificacion('✗ ' + data.error, 'error');
+            
+            // ← NUEVO: Mostrar el preview aunque falle
+            if (data.preview) {
+                console.log('📱 Preview del mensaje (no se envió):\n' + data.preview);
+                alert('Preview del mensaje:\n\n' + data.preview);
+            }
+        }
+
+    } catch (error) {
+        mostrarNotificacion('✗ Error: ' + error.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'WhatsApp';
+    }
+}
+
+</script>
+ 
+{% endblock %}

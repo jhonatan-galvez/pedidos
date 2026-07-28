@@ -78,47 +78,61 @@
     </div>
 
     <!-- ================= ACCIONES ================= -->
+    <!-- ================= ACCIONES ================= -->
     <div class="erp-actions">
 
         <a href="/admin/pedidos" class="btn-secondary">
             ← Volver
         </a>
 
-        <div class="erp-status-update">
 
-            <form method="POST" action="/admin/pedido/{{ pedido.id }}/estado">
+        <!-- IMPRIMIR TICKET -->
+        <a href="/admin/ticket/{{ pedido.id }}"
+        class="btn-primary">
 
-                <select name="estado" class="input">
+            Enviar Ticket
 
-                    <option value="PENDIENTE" {% if pedido.estado=="PENDIENTE" %}selected{% endif %}>
-                        Pendiente
-                    </option>
+        </a>
 
-                    <option value="PREPARANDO" {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
-                        Preparando
-                    </option>
 
-                    <option value="LISTO" {% if pedido.estado=="LISTO" %}selected{% endif %}>
-                        Listo
-                    </option>
+    <div class="erp-status-update">
 
-                    <option value="EN_CAMINO" {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
-                        En camino
-                    </option>
+        <form method="POST" action="/admin/pedido/{{ pedido.id }}/estado">
 
-                    <option value="ENTREGADO" {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
-                        Entregado
-                    </option>
+            <select name="estado" class="input">
 
-                </select>
+                <option value="PENDIENTE"
+                {% if pedido.estado=="PENDIENTE" %}selected{% endif %}>
+                    Pendiente
+                </option>
 
-                <button class="btn-primary" type="submit">
-                    Actualizar estado
-                </button>
+                <option value="PREPARANDO"
+                {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
+                    Preparando
+                </option>
 
-            </form>
+                <option value="LISTO"
+                {% if pedido.estado=="LISTO" %}selected{% endif %}>
+                    Listo
+                </option>
 
-        </div>
+                <option value="EN_CAMINO"
+                {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
+                    En camino
+                </option>
+
+                <option value="ENTREGADO"
+                {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
+                    Entregado
+                </option>
+
+            </select>
+
+            <button class="btn-primary" type="submit">
+                Actualizar estado
+            </button>
+
+        </form>
 
     </div>
 

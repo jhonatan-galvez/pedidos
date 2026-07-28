@@ -528,26 +528,6 @@ table tbody tr:hover{
 
 }
 
-.btn-primary{
-
-    background:#2563eb;
-
-    color:white;
-
-    border:none;
-
-    padding:10px 18px;
-
-    border-radius:10px;
-
-    cursor:pointer;
-
-    transition:.2s;
-
-    font-weight:600;
-
-}
-
 .btn-primary:hover{
 
     background:#1d4ed8;
@@ -774,21 +754,30 @@ table tbody tr:hover{
 }
 
 /* ================= BUTTONS (si no tienes) ================= */
-.btn-primary {
-    background: #2563eb;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
+
+.btn-primary{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:.2s;
+    font-weight:600;
+    font-size: 14px; 
+    font-family: "Inter", sans-serif;  
+
 }
 
 .btn-secondary {
-    background: #e5e7eb;
+    background: #a7a8a862;
     color: #111;
     padding: 8px 12px;
     border-radius: 8px;
     text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: "Inter", sans-serif;
 }
 
 /* ================= GRID MÉTRICAS ================= */
@@ -1017,4 +1006,15 @@ table tbody tr:hover{
 .logo-text span{
     font-size:15px;
     color:#94a3b8;
+}
+
+.ticket{
+    white-space: pre-wrap;
+}
+
+.acciones{
+    margin-top: 30px;   /* Espacio entre el ticket y los botones */
+    display: flex;
+    justify-content: center;
+    gap: 15px;
 }
