@@ -1,84 +1,59 @@
-"""
-Servicio para imprimir tickets en impresora Epson T20II
-Requiere: pip install python-escpos
-"""
-
-from escpos.printer import Usb
-from config import Config
+import win32print
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Configuración de la impresora Epson T20II
-VENDOR_ID = 0x04B8  # Epson
-PRODUCT_ID = 0x0E15  # T20II
+# Nombre EXACTO de la impresora instalada en Windows
+PRINTER_NAME = "EPSON TM-T20 ReceiptE4"
+
 
 class PrinterService:
-    _printer = None
-    
-    @staticmethod
-    def conectar_impresora():
-        """Conecta con la impresora Epson T20II por USB"""
-        try:
-            printer = Usb(
-                idVendor=VENDOR_ID,
-                idProduct=PRODUCT_ID,
-                timeout=3
-            )
-            PrinterService._printer = printer
-            logger.info("✓ Impresora conectada exitosamente")
-            return printer
-        except Exception as e:
-            logger.error(f"✗ Error conectando impresora: {str(e)}")
-            return None
-    
-    @staticmethod
-    def obtener_impresora():
-        """Obtiene la instancia de la impresora, conectando si es necesario"""
-        if PrinterService._printer is None:
-            PrinterService.conectar_impresora()
-        return PrinterService._printer
-    
+
     @staticmethod
     def imprimir_ticket(ticket):
         """
-        Imprime un ticket en la Epson T20II
-        Recibe un objeto Ticket con el método generar_ticket_pos()
+        Imprime un ticket utilizando la cola de impresión de Windows.
         """
+
         try:
-            printer = PrinterService.obtener_impresora()
-            
-            if printer is None:
-                logger.warning("Impresora no disponible, abortando impresión")
-                return False
-            
-            # Generar contenido del ticket
             contenido = ticket.generar_ticket_pos()
-            
-            # Configurar impresora
-            printer.set(align='center')
 
-            printer.text(contenido)
-            # Imprimir línea por línea
-            #for linea in contenido.split('\n'):
-            #    printer.text(linea + '\n')
-            
-            # Corte de papel
-            printer.cut()
+            hPrinter = win32print.OpenPrinter(PRINTER_NAME)
 
-            printer.text("\n\n")
-            # Cerrar conexión
-            #printer.close()
-            PrinterService._printer = None
-            
+            try:
+                win32print.StartDocPrinter(
+                    hPrinter,
+                    1,
+                    ("Pedido " + str(ticket.numero_pedido), None, "RAW")
+                )
+
+                win32print.StartPagePrinter(hPrinter)
+
+                # Texto
+                win32print.WritePrinter(
+                    hPrinter,
+                    contenido.encode("cp437", errors="replace")
+                )
+
+                # Alimentar papel
+                win32print.WritePrinter(hPrinter, b"\n\n\n\n\n\n")
+
+                # Corte
+                win32print.WritePrinter(hPrinter, b"\x1D\x56\x00")
+
+                win32print.EndPagePrinter(hPrinter)
+                win32print.EndDocPrinter(hPrinter)
+
+            finally:
+                win32print.ClosePrinter(hPrinter)
+
             logger.info(f"✓ Ticket {ticket.numero_pedido} impreso correctamente")
             return True
-            
-        except Exception as e:
-            logger.error(f"✗ Error imprimiendo ticket: {str(e)}")
+
+        except Exception:
+            logger.exception("Error imprimiendo ticket")
             return False
 
 
 def imprimir_ticket(ticket):
-    """Función simplificada para imprimir"""
     return PrinterService.imprimir_ticket(ticket)
