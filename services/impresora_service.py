@@ -10,8 +10,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 # Configuración de la impresora Epson T20II
-VENDOR_ID = 0x04b8  # Epson
-PRODUCT_ID = 0x0202  # T20II
+VENDOR_ID = 0x04B8  # Epson
+PRODUCT_ID = 0x0E15  # T20II
 
 class PrinterService:
     _printer = None
