@@ -29,16 +29,22 @@ class PrinterService:
 
                 win32print.StartPagePrinter(hPrinter)
 
-                # Texto
+                # Inicializar impresora
+                win32print.WritePrinter(hPrinter, b"\x1B\x40")
+
+                # Seleccionar página de códigos 16
+                win32print.WritePrinter(hPrinter, b"\x1B\x74\x10")
+
+                # Imprimir contenido
                 win32print.WritePrinter(
                     hPrinter,
-                    contenido.encode("cp858", errors="replace")
+                    contenido.encode("cp1252", errors="replace")
                 )
 
                 # Alimentar papel
                 win32print.WritePrinter(hPrinter, b"\n\n\n\n\n\n")
 
-                # Corte
+                # Corte total
                 win32print.WritePrinter(hPrinter, b"\x1D\x56\x00")
 
                 win32print.EndPagePrinter(hPrinter)
