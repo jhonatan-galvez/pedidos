@@ -49,6 +49,6 @@ def generar_ticket(pedido_id):
             subtotal=item["subtotal"]
         )
 
-    ticket.productos.append(producto)
+        ticket.productos.append(producto)
 
     return ticket

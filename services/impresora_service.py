@@ -32,7 +32,7 @@ class PrinterService:
                 # Texto
                 win32print.WritePrinter(
                     hPrinter,
-                    contenido.encode("cp437", errors="replace")
+                    contenido.encode("cp850", errors="replace")
                 )
 
                 # Alimentar papel
