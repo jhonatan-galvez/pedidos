@@ -21,7 +21,7 @@ class Ticket:
         lineas = []
 
         lineas.append("=" * 40)
-        lineas.append("          DOÑA FLORI")
+        lineas.append("              DOÑA FLORI")
         lineas.append("=" * 40)
         lineas.append("")
 
@@ -49,17 +49,17 @@ class Ticket:
 
         lineas.append("-" * 40)
         lineas.append(
-            f"Subtotal{'':<16}S/{self.subtotal:.2f}"
+            f"Subtotal{'':<25}S/{self.subtotal:.2f}"
         )
         lineas.append(
-            f"Delivery{'':<16}S/{self.delivery:.2f}"
+            f"Delivery{'':<26}S/{self.delivery:.2f}"
         )
-        lineas.append(
-            f"Descuento{'':<15}S/{self.descuento:.2f}"
-        )
+        #lineas.append(
+        #    f"Descuento{'':<23}S/{self.descuento:.2f}"
+        #)
         lineas.append("")
         lineas.append(
-            f"TOTAL{'':<20}S/{self.total:.2f}"
+            f"TOTAL{'':<28}S/{self.total:.2f}"
         )
         lineas.append("")
         lineas.append("=" * 40)
