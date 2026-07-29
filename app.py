@@ -22,6 +22,8 @@ from services.impresora_service import imprimir_ticket
 from services.whatsapp_service import enviar_ticket_por_whatsapp, enviar_confirmacion_pedido
 from services.pedido_service import obtener_pedido_completo
 import logging
+from services.whatsapp_service import enviar_confirmacion_pedido
+
 
 logger = logging.getLogger(__name__)
 
@@ -112,30 +114,6 @@ def backup_imagenes():
         as_attachment=True,
         download_name="backup_imagenes.zip"
     )
-
-@app.post("/crear_pedido")
-def crear_pedido_route():
-
-    datos = request.get_json()
-
-    datos_cliente = datos["cliente"]
-    carrito = datos["carrito"]
-
-    try:
-
-        numero = crear_pedido(datos_cliente, carrito)
-        return jsonify({
-            "ok": True,
-            "numero": numero
-        })
-
-    except Exception as e:
-
-        return jsonify({
-            "ok": False,
-            "error": str(e)
-        }), 500
-
 
 '''@app.route("/pedidos", methods=["GET"])
 def listar_pedidos():
@@ -331,10 +309,9 @@ def imprimir_ticket_route(pedido_id):
             "error": str(e)
         }), 500
 
-
 @app.post("/admin/ticket/<int:pedido_id>/whatsapp")
 def enviar_ticket_whatsapp(pedido_id):
-    """Envía el ticket por WhatsApp"""
+    """Envía el ticket por WhatsApp desde admin"""
     try:
         pedido = obtener_pedido_completo(pedido_id)
         
@@ -347,30 +324,29 @@ def enviar_ticket_whatsapp(pedido_id):
         ticket = generar_ticket(pedido_id)
         numero = pedido["cliente"]["telefono"]
         
-        # Generar el mensaje
-        contenido = ticket.generar_ticket_pos()
-        mensaje = f"```\n{contenido}\n```"
+        # Construir items
+        items_detalle = [
+            f"{item['producto']} x {item['cantidad']}"
+            for item in pedido["detalle"]
+        ]
         
-        # Mostrar en logs
-        print("\n" + "="*50)
-        print(f"📱 MENSAJE WHATSAPP para {numero}:")
-        print("="*50)
-        print(mensaje)
-        print("="*50 + "\n")
-        
-        # Intentar enviar
+        # ✅ USAR CONFIRMACIÓN (no ticket)
         try:
-            enviar_ticket_por_whatsapp(numero, ticket)
+            enviar_confirmacion_pedido(
+                numero,
+                pedido["numero"],
+                pedido["total"],
+                items_count=len(pedido["detalle"]),
+                items_detalle=items_detalle
+            )
             return jsonify({
                 "ok": True,
-                "mensaje": f"Ticket enviado a {numero}",
-                "preview": mensaje
+                "mensaje": f"Confirmación enviada a {numero}"
             })
         except Exception as e:
             return jsonify({
                 "ok": False,
-                "error": f"No se pudo enviar: {str(e)}",
-                "preview": mensaje
+                "error": f"No se pudo enviar: {str(e)}"
             }), 500
         
     except Exception as e:
@@ -385,13 +361,52 @@ def ticket_preview(pedido_id):
 
     pedido = obtener_pedido_completo(pedido_id)
 
-    ticket = Ticket(pedido)
+    ticket = generar_ticket(pedido_id)
 
     return render_template(
         "admin/ticket_preview.html",
         ticket=ticket,
         pedido_id=pedido_id
     )
+
+@app.post("/crear_pedido")
+def crear_pedido_route():
+    datos = request.get_json()
+    datos_cliente = datos["cliente"]
+    carrito = datos["carrito"]
+
+    try:
+        pedido_id = crear_pedido(datos_cliente, carrito)
+        pedido = obtener_pedido_completo(pedido_id)
+        
+        # Construir detalle de productos
+        items_detalle = []
+        for item in carrito:
+            descripcion = f"{item['producto']} x {item['cantidad']}"
+            items_detalle.append(descripcion)
+        
+        # ✅ SOLO enviar confirmación (NO ticket)
+        try:
+            enviar_confirmacion_pedido(
+                datos_cliente["telefono"],
+                pedido["numero"],
+                pedido["total"],
+                items_count=len(carrito),
+                items_detalle=items_detalle
+            )
+            whatsapp_ok = True
+        except Exception as e:
+            logger.warning(f"⚠️ No se pudo enviar: {str(e)}")
+            whatsapp_ok = False
+        
+        return jsonify({
+            "ok": True,
+            "numero": pedido["numero"],
+            "whatsapp_enviado": whatsapp_ok
+        })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
     
 #ticket = generar_ticket(4)
 #print(ticket.productos)

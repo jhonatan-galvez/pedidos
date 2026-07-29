@@ -1,5 +1,7 @@
 import win32print
 import logging
+from PIL import Image
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ class PrinterService:
                 )
 
                 win32print.StartPagePrinter(hPrinter)
+                #PrinterService.imprimir_logo(hPrinter)
 
                 # Inicializar impresora
                 win32print.WritePrinter(hPrinter, b"\x1B\x40")
@@ -60,6 +63,42 @@ class PrinterService:
             logger.exception("Error imprimiendo ticket")
             return False
 
+    @staticmethod
+    def imprimir_logo(hPrinter):
+        """
+        Imprime el logo de la empresa.
+        """
+        try:
+            ruta_logo = os.path.join(
+                os.getcwd(),
+                "static",
+                "img",
+                "logo.png"      # <-- cambia el nombre si tu logo tiene otro nombre
+            )
+
+            img = Image.open(ruta_logo)
+
+            # Convertir a blanco y negro
+            img = img.convert("1")
+
+            # Ancho máximo para TM-T20II 58mm
+            ancho = 384
+
+            w, h = img.size
+            alto = int(h * (ancho / w))
+
+            img = img.resize((ancho, alto))
+
+            # Guardar temporalmente en formato BMP monocromo
+            temp = os.path.join(os.getcwd(), "logo.bmp")
+            img.save(temp)
+
+            # ESC * NO soporta BMP directamente.
+            # Esta función queda preparada para el siguiente paso.
+            logger.info("Logo preparado correctamente.")
+
+        except Exception:
+            logger.exception("No fue posible cargar el logo.")    
 
 def imprimir_ticket(ticket):
     return PrinterService.imprimir_ticket(ticket)
