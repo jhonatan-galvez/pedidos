@@ -4,6 +4,7 @@ Servicio de WhatsApp que conecta con servidor wpp-connect en puerto 21465
 
 import requests
 import logging
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -37,17 +38,7 @@ def limpiar_numero(numero):
 
 def enviar_mensaje(numero, mensaje):
     """Envía un mensaje de texto simple por WhatsApp"""
-    try:
-        import traceback
-        
-        # DEBUG: Ver de dónde se llama
-        print("\n" + "="*60)
-        print("📞 LLAMADA A enviar_mensaje()")
-        print(f"Mensaje comienza con: {mensaje[:50]}...")
-        print("\nSTACK TRACE:")
-        traceback.print_stack()
-        print("="*60 + "\n")
-        
+    try:        
         numero = limpiar_numero(numero)
         
         payload = {
@@ -109,6 +100,103 @@ def enviar_ticket_por_whatsapp(numero, ticket):
         logger.error(f"✗ Error enviando ticket por WhatsApp: {str(e)}")
         raise
 
+def obtener_plantilla_confirmacion(
+        numero_pedido,
+        total,
+        items_count,
+        detalle_productos
+):
+
+    plantillas = [
+
+f"""*¡Pedido recibido!* 
+
+Hola 👋
+Hemos registrado correctamente tu pedido.
+{detalle_productos}
+📋 Pedido: *{numero_pedido}*
+💰 Total: *S/ {total:.2f}*
+🛍️ Productos: *{items_count or 'varios'}*
+
+Muy pronto nos comunicaremos contigo para coordinar la entrega.
+
+Gracias por confiar en *DOÑA FLORI* 💚
+""",
+
+
+f"""¡Gracias por comprar con nosotros! 😊
+
+Tu pedido ya fue registrado.
+{detalle_productos}
+📦 Código:
+*{numero_pedido}*
+
+💵 Total:
+*S/ {total:.2f}*
+
+Nos comunicaremos contigo en breve para confirmar los detalles.
+¡Que tengas un excelente día!
+
+*DOÑA FLORI*
+""",
+
+
+f"""✅ Hemos recibido tu pedido.
+
+Número:
+*{numero_pedido}*
+{detalle_productos}
+Monto:
+*S/ {total:.2f}*
+
+Cantidad de productos:
+*{items_count or 'varios'}*
+
+En unos minutos confirmaremos la información contigo.
+
+Muchas gracias por elegir *DOÑA FLORI*.
+""",
+
+
+f"""Hola 👋
+
+Tu compra fue registrada correctamente.
+
+📋 Pedido:
+{numero_pedido}
+{detalle_productos}
+💰 Total:
+S/ {total:.2f}
+
+Nuestro equipo revisará el pedido y pronto se pondrá en contacto contigo.
+
+¡Gracias por preferirnos! 🌸
+*DOÑA FLORI*
+""",
+
+
+f"""🎉 ¡Excelente!
+
+Ya tenemos tu pedido.
+
+📋 Pedido:
+{numero_pedido}
+{detalle_productos}
+💰 Total:
+S/ {total:.2f}
+
+🛒 Productos:
+{items_count or 'varios'}
+
+En breve confirmaremos la entrega.
+
+Muchas gracias 😊
+DOÑA FLORI
+"""
+
+    ]
+
+    return random.choice(plantillas)
 
 def enviar_confirmacion_pedido(numero, numero_pedido, total, items_count=None, items_detalle=None):
     """Envía confirmación simple de pedido recibido"""
@@ -121,25 +209,16 @@ def enviar_confirmacion_pedido(numero, numero_pedido, total, items_count=None, i
             detalle_productos = "\n🛍️ *Tu pedido incluye:*\n"
             for item in items_detalle:
                 detalle_productos += f"  ✓ {item}\n"
+
+        logger.info(f"items_detalle: {items_detalle}")
+        logger.info(f"detalle_productos:\n{detalle_productos}")
         
-        mensaje = f"""*¡PEDIDO CONFIRMADO!*
-
-Hola 👋 Tu pedido ha sido recibido correctamente.
-{detalle_productos}
-━━━━━━━━━━━━━━━
-
-📋 *Número de pedido:* {numero_pedido}
-💰 *Monto total:* S/ {total:.2f}
-📦 *Cantidad de productos:* {items_count or 'varios'}
-
-━━━━━━━━━━━━━━━
-
-✅ Nos pondremos en contacto para confirmar detalles de entrega.
-
-¿Tienes dudas? Estamos aquí para ayudarte 😊
-
-📞 DOÑA FLORI
-Calidad y confianza"""
+        mensaje = obtener_plantilla_confirmacion(
+            numero_pedido,
+            total,
+            items_count,
+            detalle_productos
+        )
         
         return enviar_mensaje(numero, mensaje.strip())
         

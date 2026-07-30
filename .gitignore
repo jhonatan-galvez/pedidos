@@ -1,3 +1,6 @@
+# =========================
+# Python
+# =========================
 __pycache__/
 *.pyc
 *.pyo
@@ -9,7 +12,23 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Base de datos
+database/*.db
+
+# Excel
 uploads/base.xlsx
 uploads/*.xlsx
+
+# =========================
+# WhatsApp
+# =========================
+whatsapp/node_modules/
+whatsapp/tokens/
+whatsapp/*.log
+
+# Mantener estos archivos
+!whatsapp/package.json
+!whatsapp/package-lock.json
+!whatsapp/server.js
 
 .env

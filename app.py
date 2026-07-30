@@ -19,8 +19,7 @@ from services.cloudinary_service import subir_imagen
 from services.ticket_service import generar_ticket, Ticket
 from routes.ticket_routes import ticket_bp
 from services.impresora_service import imprimir_ticket
-from services.whatsapp_service import enviar_ticket_por_whatsapp, enviar_confirmacion_pedido
-from services.pedido_service import obtener_pedido_completo
+from services.notificacion_service import iniciar_notificacion
 import logging
 from services.whatsapp_service import enviar_confirmacion_pedido
 
@@ -377,32 +376,16 @@ def crear_pedido_route():
 
     try:
         pedido_id = crear_pedido(datos_cliente, carrito)
+
         pedido = obtener_pedido_completo(pedido_id)
-        
-        # Construir detalle de productos
-        items_detalle = []
-        for item in carrito:
-            descripcion = f"{item['producto']} x {item['cantidad']}"
-            items_detalle.append(descripcion)
-        
-        # ✅ SOLO enviar confirmación (NO ticket)
-        try:
-            enviar_confirmacion_pedido(
-                datos_cliente["telefono"],
-                pedido["numero"],
-                pedido["total"],
-                items_count=len(carrito),
-                items_detalle=items_detalle
-            )
-            whatsapp_ok = True
-        except Exception as e:
-            logger.warning(f"⚠️ No se pudo enviar: {str(e)}")
-            whatsapp_ok = False
-        
+
+        # Ejecutar impresión + WhatsApp en segundo plano
+        iniciar_notificacion(pedido_id) 
+               
         return jsonify({
             "ok": True,
+            "pedido_id": pedido_id,
             "numero": pedido["numero"],
-            "whatsapp_enviado": whatsapp_ok
         })
 
     except Exception as e:
