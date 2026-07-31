@@ -1,0 +1,183 @@
+{% extends "admin/base_admin.html" %}
+
+
+{% block title %}
+Doña Flori | Editar Cliente
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="erp-container">
+
+
+    <!-- HEADER -->
+
+    <div class="erp-header">
+
+        <div>
+
+            <h1 class="erp-title">
+                👤 Editar Cliente
+            </h1>
+
+            <p class="erp-subtitle">
+                Actualiza la información del cliente
+            </p>
+
+        </div>
+
+
+        <a href="/admin/clientes" class="btn-secondary">
+            ← Volver
+        </a>
+
+
+    </div>
+
+
+
+
+    <!-- CARD -->
+
+    <div class="edit-card">
+
+
+        <div class="client-header-edit">
+
+
+            <div class="client-avatar">
+
+                {{ cliente.nombre[0]|upper }}
+
+            </div>
+
+
+            <div>
+
+                <h2>
+                    {{ cliente.nombre }}
+                </h2>
+
+                <span>
+                    Cliente registrado
+                </span>
+
+            </div>
+
+
+        </div>
+
+
+
+
+
+
+        <form method="POST">
+
+
+            <div class="form-grid">
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Nombre completo
+                    </label>
+
+                    <input 
+                    type="text"
+                    name="nombre"
+                    value="{{ cliente.nombre }}"
+                    required>
+
+                </div>
+
+
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Teléfono
+                    </label>
+
+                    <input 
+                    type="text"
+                    name="telefono"
+                    value="{{ cliente.telefono }}"
+                    required>
+
+                </div>
+
+
+
+
+
+                <div class="form-group full">
+
+                    <label>
+                        Dirección
+                    </label>
+
+                    <input 
+                    type="text"
+                    name="direccion"
+                    value="{{ cliente.direccion }}">
+
+                </div>
+
+
+
+
+
+
+                <div class="form-group full">
+
+                    <label>
+                        Referencia
+                    </label>
+
+                    <textarea
+                    name="referencia">{{ cliente.referencia }}</textarea>
+
+                </div>
+
+
+            </div>
+
+
+
+
+
+            <div class="form-actions">
+
+                <button 
+                type="submit"
+                class="btn-primary">
+
+                    💾 Guardar cambios
+
+                </button>
+
+
+            </div>
+
+
+
+        </form>
+
+
+
+    </div>
+
+
+
+</div>
+
+
+{% endblock %}

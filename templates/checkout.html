@@ -128,16 +128,21 @@
 
         const datos = {
 
-            cliente:{
+        cliente:{
 
-                nombre:document.getElementById("nombre").value,
-                telefono:document.getElementById("telefono").value,
-                direccion:document.getElementById("direccion").value,
-                referencia:document.getElementById("referencia").value,
-                tipo_pago: document.querySelector(
-                    'input[name="tipo_pago"]:checked'
-                ).value
-            },
+            nombre: document.getElementById("nombre").value,
+            telefono: document.getElementById("telefono").value,
+            direccion: document.getElementById("direccion").value,
+            referencia: document.getElementById("referencia").value,
+
+            tipo_pago: document.querySelector(
+                'input[name="tipo_pago"]:checked'
+            ).value,
+
+            delivery: delivery,
+            descuento: descuento
+
+        },
 
             carrito:carrito
 

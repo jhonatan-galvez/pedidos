@@ -6,7 +6,7 @@ from services.cliente_service import (
     crear_cliente,
     actualizar_cliente
 )
-
+from services.producto_service import obtener_productos
 
 # ======================================================
 # GENERAR NÚMERO DE PEDIDO
@@ -329,6 +329,7 @@ def obtener_pedido_detalle(pedido_id):
     cursor.execute("""
         SELECT
 
+            id,
             producto_codigo,
             producto,
             marca,
@@ -354,6 +355,7 @@ def obtener_pedido_detalle(pedido_id):
 
         detalle.append({
 
+            "id": row["id"],
             "codigo": row["producto_codigo"],
             "producto": row["producto"],
             "marca": row["marca"],
@@ -433,7 +435,8 @@ def obtener_pedido_completo(pedido_id):
     conn.close()
 
     pedido["detalle"] = obtener_pedido_detalle(pedido_id)
-
+    pedido["productos_catalogo"] = obtener_productos()
+    
     return pedido
 
 # ======================================================
@@ -532,9 +535,110 @@ def obtener_dashboard():
         "ultimos": ultimos
     }
 
+def obtener_pedidos_cliente(cliente_id):
+
+    conn = conectar()
+    cursor = conn.cursor()
 
 
+    cursor.execute("""
+        SELECT
 
+            id,
+            numero,
+            fecha,
+            estado,
+            total
+
+        FROM pedidos
+
+        WHERE cliente_id = ?
+
+        ORDER BY id DESC
+
+
+    """,(cliente_id,))
+
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+
+    pedidos=[]
+
+
+    for r in rows:
+
+        pedidos.append({
+
+            "id": r["id"],
+            "numero": r["numero"],
+            "fecha": r["fecha"],
+            "estado": r["estado"],
+            "total": r["total"]
+
+        })
+
+
+    return pedidos
+
+# ======================================================
+# EDITAR PEDIDO
+# ======================================================
+
+def actualizar_pedido(pedido_id, datos):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+
+    try:
+
+        cursor.execute("""
+            UPDATE pedidos
+            SET
+                tipo_pago = ?,
+                observaciones = ?
+            WHERE id = ?
+        """,
+        (
+
+            datos["tipo_pago"],
+            datos["observaciones"],
+            pedido_id
+
+        ))
+
+
+        cursor.execute("""
+            UPDATE clientes
+            SET
+                direccion = ?
+            WHERE id = (
+                SELECT cliente_id
+                FROM pedidos
+                WHERE id = ?
+            )
+        """,
+        (
+            datos["direccion"],
+            pedido_id
+        ))
+
+
+        conn.commit()
+
+
+    except Exception:
+
+        conn.rollback()
+        raise
+
+
+    finally:
+
+        conn.close()
 
 
 

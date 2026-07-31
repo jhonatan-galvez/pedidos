@@ -1,0 +1,123 @@
+{% extends "admin/base_admin.html" %}
+
+
+{% block title %}
+Doña Flori | Pedidos Cliente
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="erp-container">
+
+
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">
+                🛒 Pedidos del cliente
+            </h1>
+
+            <p class="erp-subtitle">
+                Historial de pedidos realizados
+            </p>
+        </div>
+
+
+        <a href="/admin/clientes" class="btn-secondary">
+            ← Volver
+        </a>
+
+
+    </div>
+
+
+
+    <div class="product-grid">
+
+
+    {% for p in pedidos %}
+
+
+        <div class="product-card">
+
+
+            <div class="product-header">
+
+
+                <h3 class="product-name">
+                    {{ p.numero }}
+                </h3>
+
+
+                <span class="badge-active">
+                    {{ p.estado }}
+                </span>
+
+
+            </div>
+
+
+
+            <div class="product-info">
+
+
+                <p>
+                    <span>Fecha:</span>
+                    {{ p.fecha }}
+                </p>
+
+
+                <p>
+                    <span>Total:</span>
+                    S/ {{ "%.2f"|format(p.total) }}
+                </p>
+
+
+            </div>
+
+
+
+            <div class="product-actions">
+
+
+                <a 
+                href="/admin/pedido/{{p.id}}"
+                class="btn-secondary">
+
+                    👁 Ver pedido
+
+                </a>
+
+
+            </div>
+
+
+        </div>
+
+
+    {% else %}
+
+
+        <div class="product-card">
+
+            <h3>
+                No hay pedidos registrados
+            </h3>
+
+        </div>
+
+
+    {% endfor %}
+
+
+    </div>
+
+
+</div>
+
+
+
+{% endblock %}

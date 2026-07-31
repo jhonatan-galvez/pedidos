@@ -22,7 +22,20 @@ from services.impresora_service import imprimir_ticket
 from services.notificacion_service import iniciar_notificacion
 import logging
 from services.whatsapp_service import enviar_confirmacion_pedido
-
+from services.producto_service import actualizar_producto, obtener_admproductos
+from services.cliente_service import obtener_clientes, actualizar_cliente_admin, obtener_cliente_por_id
+from services.pedido_service import (
+    crear_pedido,
+    obtener_pedidos,
+    obtener_pedido_completo,
+    actualizar_estado_pedido,
+    obtener_dashboard,
+    obtener_pedidos_cliente
+)
+from services.pedido_service import (
+    obtener_pedido_completo,
+    actualizar_pedido
+)
 
 logger = logging.getLogger(__name__)
 
@@ -391,7 +404,150 @@ def crear_pedido_route():
 
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
-    
+
+@app.route("/admin/productos/editar/<int:id>", methods=["GET","POST"])
+def editar_producto(id):
+
+    productos = obtener_admproductos()
+
+    producto = next(
+        (
+            p for p in productos
+            if p["id"] == id
+        ),
+        None
+    )
+
+
+    if producto is None:
+        return "Producto no encontrado", 404
+
+
+    if request.method == "POST":
+
+        actualizar_producto(
+            id,
+            request.form["producto"],
+            request.form["marca"],
+            request.form["tipo"],
+            request.form["presentacion"],
+            request.form["stock"],
+            request.form["precio"]
+        )
+
+        return redirect("/admin/productos")
+
+
+    return render_template(
+        "admin/editar_producto.html",
+        producto=producto
+    )
+
+@app.route("/admin/clientes")
+def admin_clientes():
+
+    clientes = obtener_clientes()
+
+    return render_template(
+        "admin/clientes.html",
+        clientes=clientes
+    )
+
+@app.route(
+    "/admin/clientes/editar/<int:id>",
+    methods=["GET","POST"]
+)
+
+def editar_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+
+    if request.method == "POST":
+
+        actualizar_cliente_admin(
+            id,
+            request.form["nombre"],
+            request.form["telefono"],
+            request.form["direccion"],
+            request.form["referencia"]
+        )
+
+        return redirect("/admin/clientes")
+
+
+
+    return render_template(
+        "admin/editar_cliente.html",
+        cliente=cliente
+    )
+
+def pedidos_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+    pedidos = obtener_pedidos_cliente(id)
+
+
+    return render_template(
+        "admin/pedidos_cliente.html",
+        cliente=cliente,
+        pedidos=pedidos
+    )
+
+@app.route("/admin/clientes/<int:id>/pedidos")
+def pedidos_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+    pedidos = obtener_pedidos_cliente(id)
+
+
+    return render_template(
+        "admin/pedidos_cliente.html",
+        cliente=cliente,
+        pedidos=pedidos
+    )
+
+@app.route("/admin/pedido/<int:id>/editar", methods=["GET","POST"])
+def editar_pedido(id):
+
+    pedido = obtener_pedido_completo(id)
+
+    if pedido is None:
+        return "Pedido no encontrado"
+
+
+    if request.method == "POST":
+
+        datos = {
+
+            "tipo_pago": request.form["tipo_pago"],
+            "direccion": request.form["direccion"],
+            "observaciones": request.form["observaciones"]
+
+        }
+
+
+        actualizar_pedido(
+            id,
+            datos
+        )
+
+
+        return redirect(
+            f"/admin/pedido/{id}"
+        )
+
+
+    return render_template(
+        "admin/editar_pedido.html",
+        pedido=pedido
+    )
+
+
+
+
 #ticket = generar_ticket(4)
 #print(ticket.productos)
 #print(ticket.generar_ticket_pos())

@@ -1,0 +1,289 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Editar producto{% endblock %}
+
+{% block content %}
+
+<div class="erp-container">
+
+
+    <!-- ================= HEADER ================= -->
+
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">
+                ✏️ Editar producto
+            </h1>
+
+            <p class="erp-subtitle">
+                Modifica la información del catálogo
+            </p>
+        </div>
+
+
+        <a href="/admin/productos" class="btn-secondary">
+            ← Volver
+        </a>
+
+    </div>
+
+
+
+    <!-- ================= PRODUCTO ACTUAL ================= -->
+
+    <div class="product-card edit-product-card">
+
+
+        <div class="edit-product-preview">
+
+
+            <div class="product-image">
+
+
+                {% if producto.imagen %}
+
+                    {% if producto.imagen.startswith("http") %}
+
+                        <img
+                            src="{{ producto.imagen }}"
+                            class="product-img">
+
+                    {% else %}
+
+                        <img
+                            src="{{ url_for(
+                                'static',
+                                filename='img/productos/' + producto.imagen
+                            ) }}"
+                            class="product-img">
+
+                    {% endif %}
+
+
+                {% else %}
+
+                    <img
+                        src="{{ url_for(
+                            'static',
+                            filename='img/productos/SIN_IMAGEN.jpg'
+                        ) }}"
+                        class="product-img">
+
+                {% endif %}
+
+
+            </div>
+
+
+
+            <div class="edit-product-info">
+
+                <h2>
+                    {{ producto.producto }}
+                </h2>
+
+
+                <p>
+                    <strong>Código:</strong>
+                    {{ producto.codigo }}
+                </p>
+
+
+                <p>
+                    <strong>Marca:</strong>
+                    {{ producto.marca }}
+                </p>
+
+
+                <p>
+                    <strong>Estado:</strong>
+
+                    {% if producto.activo == 1 %}
+
+                        <span class="badge-active">
+                            Activo
+                        </span>
+
+                    {% else %}
+
+                        <span class="badge-inactive">
+                            Inactivo
+                        </span>
+
+                    {% endif %}
+
+                </p>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <hr>
+
+
+
+        <!-- ================= FORMULARIO ================= -->
+
+
+        <form method="POST">
+
+
+            <h3 class="section-title">
+                Información editable
+            </h3>
+
+
+
+            <div class="form-grid">
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Producto
+                    </label>
+
+                    <input
+                        type="text"
+                        name="producto"
+                        value="{{ producto.producto }}"
+                        required>
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Marca
+                    </label>
+
+                    <input
+                        type="text"
+                        name="marca"
+                        value="{{ producto.marca }}">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Tipo
+                    </label>
+
+                    <input
+                        type="text"
+                        name="tipo"
+                        value="{{ producto.tipo }}">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Presentación
+                    </label>
+
+                    <input
+                        type="text"
+                        name="presentacion"
+                        value="{{ producto.presentacion }}">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Stock actual
+                    </label>
+
+                    <input
+                        type="number"
+                        name="stock"
+                        value="{{ producto.stock }}"
+                        min="0">
+
+                </div>
+
+
+
+                <div class="form-group">
+
+                    <label>
+                        Precio venta
+                    </label>
+
+
+                    <div class="price-input">
+
+                        <span>
+                            S/
+                        </span>
+
+                        <input
+                            type="number"
+                            name="precio"
+                            value="{{ producto.precio }}"
+                            step="0.01"
+                            min="0">
+
+                    </div>
+
+
+                </div>
+
+
+
+            </div>
+
+
+
+            <div class="product-actions">
+
+
+                <button
+                    type="submit"
+                    class="btn-primary">
+
+                    💾 Guardar cambios
+
+                </button>
+
+
+
+                <a
+                    href="/admin/productos"
+                    class="btn-secondary">
+
+                    Cancelar
+
+                </a>
+
+
+            </div>
+
+
+        </form>
+
+
+
+    </div>
+
+
+</div>
+
+
+{% endblock %}

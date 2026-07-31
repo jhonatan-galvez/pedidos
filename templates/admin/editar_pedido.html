@@ -1,0 +1,248 @@
+{% extends "admin/base_admin.html" %}
+
+
+{% block title %}
+Doña Flori | Editar Pedido
+{% endblock %}
+
+
+{% block content %}
+
+
+<div class="erp-container">
+
+
+<div class="erp-header">
+
+<div>
+
+<h1 class="erp-title">
+✏️ Editar {{ pedido.numero }}
+</h1>
+
+<p class="erp-subtitle">
+Modificar datos del pedido
+</p>
+
+</div>
+
+</div>
+
+
+
+<form method="POST">
+
+
+<div class="erp-grid">
+
+
+<div class="erp-card">
+
+
+<h3>Cliente</h3>
+
+
+<p>
+<strong>
+Nombre:
+</strong>
+
+{{ pedido.cliente.nombre }}
+
+</p>
+
+
+<p>
+<strong>
+Teléfono:
+</strong>
+
+{{ pedido.cliente.telefono }}
+
+</p>
+
+
+
+<label>
+Dirección
+</label>
+
+
+<input
+class="input"
+name="direccion"
+value="{{ pedido.cliente.direccion }}">
+
+
+</div>
+
+
+
+
+<div class="erp-card">
+
+
+<h3>Pago</h3>
+
+
+<label>
+Tipo de pago
+</label>
+
+
+<select
+name="tipo_pago"
+class="input">
+
+
+<option
+{% if pedido.cliente.tipo_pago=="Efectivo" %}
+selected
+{% endif %}
+>
+Efectivo
+</option>
+
+
+<option
+{% if pedido.cliente.tipo_pago=="Yape" %}
+selected
+{% endif %}
+>
+Yape
+</option>
+
+
+<option
+{% if pedido.cliente.tipo_pago=="Visa" %}
+selected
+{% endif %}
+>
+Visa
+</option>
+
+
+</select>
+
+
+
+<label>
+Observaciones
+</label>
+
+
+<textarea
+class="input"
+name="observaciones">{{pedido.observaciones}}</textarea>
+
+
+
+</div>
+
+
+</div>
+
+
+
+<div class="erp-card full">
+
+
+<h3>
+Productos
+</h3>
+
+
+<table class="erp-table">
+
+
+<thead>
+
+<tr>
+
+<th>
+Producto
+</th>
+
+<th>
+Cantidad
+</th>
+
+<th>
+Precio
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for item in pedido.detalle %}
+
+
+<tr>
+
+<td>
+{{item.producto}}
+</td>
+
+
+<td>
+{{item.cantidad}}
+</td>
+
+
+<td>
+S/ {{item.precio_unitario}}
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+
+<div class="erp-actions">
+
+
+<a href="/admin/pedido/{{pedido.id}}"
+class="btn-secondary">
+
+Cancelar
+
+</a>
+
+
+
+<button
+class="btn-primary">
+
+Guardar cambios
+
+</button>
+
+
+</div>
+
+
+
+</form>
+
+
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "admin/base_admin.html" %}
+
+
+{% block title %}
+Doña Flori | Clientes
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="erp-container">
+
+
+<!-- HEADER -->
+
+<div class="erp-header">
+
+    <div>
+
+        <h1 class="erp-title">
+            👥 Clientes
+        </h1>
+
+        <p class="erp-subtitle">
+            Gestión de clientes y pedidos realizados
+        </p>
+
+    </div>
+
+
+</div>
+
+
+
+
+<!-- GRID CLIENTES -->
+
+
+<div class="product-grid">
+
+
+{% for c in clientes %}
+
+
+<div class="product-card">
+
+
+    <!-- AVATAR -->
+
+    <div class="product-image">
+
+        <div style="
+            width:90px;
+            height:90px;
+            border-radius:50%;
+            margin:auto;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            background:#f1f5f9;
+            font-size:35px;
+            font-weight:bold;
+        ">
+
+            {{ c.nombre[0]|upper }}
+
+        </div>
+
+
+    </div>
+
+
+
+
+    <!-- HEADER -->
+
+    <div class="product-header">
+
+
+        <h3 class="product-name">
+
+            {{ c.nombre }}
+
+        </h3>
+
+
+        <span class="badge-active">
+
+            Cliente
+
+        </span>
+
+
+    </div>
+
+
+
+
+
+    <!-- INFORMACION -->
+
+
+    <div class="product-info">
+
+
+        <p>
+            <span>📱 Teléfono:</span>
+            {{ c.telefono }}
+        </p>
+
+
+
+        <p>
+            <span>📍 Dirección:</span>
+            {{ c.direccion }}
+        </p>
+
+
+
+        {% if c.referencia %}
+
+        <p>
+
+            <span>📝 Referencia:</span>
+            {{ c.referencia }}
+
+        </p>
+
+        {% endif %}
+
+
+    </div>
+
+
+
+
+
+    <!-- META -->
+
+
+    <div class="product-meta">
+
+
+        <div class="price">
+
+            🛒 {{ c.pedidos }} pedidos
+
+        </div>
+
+
+    </div>
+
+
+
+
+
+
+    <!-- ACCIONES -->
+
+
+    <div class="product-actions">
+
+
+        <a href="/admin/clientes/editar/{{ c.id }}"
+           class="btn-secondary">
+
+            Editar
+
+        </a>
+
+
+
+        <a href="/admin/clientes/{{ c.id }}/pedidos"
+           class="btn-secondary">
+
+            Ver pedidos
+
+        </a>
+
+
+    </div>
+
+
+
+</div>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

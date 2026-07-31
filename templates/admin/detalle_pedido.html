@@ -45,7 +45,8 @@
         </div>
 
     </div>
-
+    <form method="POST"
+        action="/admin/pedido/{{ pedido.id }}/editar">
     <!-- ================= PRODUCTOS ================= -->
     <div class="erp-card full">
 
@@ -55,22 +56,140 @@
 
             <thead>
                 <tr>
+                    <th style="width:130px;">Código</th>
                     <th>Producto</th>
-                    <th>Cantidad</th>
-                    <th>Precio</th>
-                    <th>Subtotal</th>
+                    <th style="width:100px;">Cantidad</th>
+                    <th style="width:120px;">Precio</th>
+                    <th style="width:120px;">Subtotal</th>
+                    <th style="width:70px;">Acción</th>
                 </tr>
             </thead>
 
+            <div style="margin-top:20px;">
+
+            <button
+            class="btn-secondary"
+            type="button">
+
+            + Agregar producto
+
+            </button>
+
+            </div>
+
             <tbody>
                 {% for item in pedido.detalle %}
+
                 <tr>
-                    <td>{{ item.producto }}</td>
-                    <td>{{ item.cantidad }}</td>
-                    <td>S/ {{ item.precio_unitario }}</td>
-                    <td><strong>S/ {{ item.subtotal }}</strong></td>
+
+                    <!-- CODIGO -->
+                    <td>
+
+                        <select
+                            class="input codigo-producto"
+                            name="codigo_{{ item.id }}"
+                            onchange="actualizarProducto(this)">
+
+                            {% for p in pedido.productos_catalogo %}
+
+                            <option
+                                value="{{ p.codigo }}"
+                                data-producto="{{ p.producto }}"
+                                data-marca="{{ p.marca }}"
+                                data-presentacion="{{ p.presentacion }}"
+                                data-precio="{{ p.precio }}"
+                                {% if p.codigo==item.codigo %}
+                                selected
+                                {% endif %}
+                            >
+
+                                {{ p.codigo }}
+
+                            </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </td>
+
+                    <!-- PRODUCTO -->
+                    <td>
+
+                        <strong class="nombre-producto">
+
+                            {{ item.producto }}
+
+                        </strong>
+
+                        <br>
+
+                        <small class="descripcion-producto">
+
+                            {{ item.marca }}
+                            {{ item.presentacion }}
+
+                        </small>
+
+                    </td>
+
+                    <!-- CANTIDAD -->
+                    <td>
+
+                        <input
+                            type="number"
+                            class="input cantidad-producto"
+                            value="{{ item.cantidad }}"
+                            min="1"
+                            name="cantidad_{{ item.id }}"
+                            onchange="recalcularFila(this)">
+
+                    </td>
+
+                    <!-- PRECIO -->
+                    <td>
+
+                        <span
+                            class="precio-producto"
+                            data-precio="{{ item.precio_unitario }}">
+
+                            S/ {{ "%.2f"|format(item.precio_unitario) }}
+
+                        </span>
+
+                    </td>
+
+                    <!-- SUBTOTAL -->
+                    <td>
+
+                        <strong class="subtotal-producto">
+
+                            S/ {{ "%.2f"|format(item.subtotal) }}
+
+                        </strong>
+
+                    </td>
+
+                    <!-- BORRAR -->
+                    <td>
+
+                        <button
+                            type="button"
+                            class="btn-danger eliminar-producto">
+
+                            🗑
+
+                        </button>
+
+                    </td>
+
                 </tr>
-                {% endfor %}
+                </form>
+                {% endfor %} 
+
+
+
+
             </tbody>
 
         </table>
@@ -85,7 +204,6 @@
             ← Volver
         </a>
 
-
         <!-- IMPRIMIR TICKET -->
         <a href="/admin/ticket/{{ pedido.id }}"
         class="btn-primary">
@@ -96,8 +214,6 @@
 
 
     <div class="erp-status-update">
-
-        <form method="POST" action="/admin/pedido/{{ pedido.id }}/estado">
 
             <select name="estado" class="input">
 
@@ -129,13 +245,57 @@
             </select>
 
             <button class="btn-primary" type="submit">
-                Actualizar estado
+                Guardar cambios
             </button>
-
-        </form>
 
     </div>
 
 </div>
+
+<script>
+
+function actualizarProducto(select){
+
+    let opcion = select.options[select.selectedIndex];
+
+    let fila = select.closest("tr");
+
+    fila.querySelector(".nombre-producto").innerText =
+        opcion.dataset.producto;
+
+    fila.querySelector(".descripcion-producto").innerText =
+        opcion.dataset.marca + " " +
+        opcion.dataset.presentacion;
+
+    let precio = parseFloat(opcion.dataset.precio);
+
+    let spanPrecio = fila.querySelector(".precio-producto");
+
+    spanPrecio.dataset.precio = precio;
+
+    spanPrecio.innerText = "S/ " + precio.toFixed(2);
+
+    recalcularFila(
+        fila.querySelector(".cantidad-producto")
+    );
+
+}
+
+function recalcularFila(input){
+
+    let fila = input.closest("tr");
+
+    let precio = parseFloat(
+        fila.querySelector(".precio-producto").dataset.precio
+    );
+
+    let subtotal = precio * parseInt(input.value);
+
+    fila.querySelector(".subtotal-producto").innerText =
+        "S/ " + subtotal.toFixed(2);
+
+}
+
+</script>
 
 {% endblock %}

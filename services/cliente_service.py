@@ -99,3 +99,123 @@ def obtener_cliente_por_telefono(telefono):
     conn.close()
 
     return cliente
+
+from services.database_service import conectar
+
+
+def obtener_clientes():
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            c.id,
+            c.nombre,
+            c.telefono,
+            c.direccion,
+            c.referencia,
+
+            COUNT(p.id) AS pedidos
+
+        FROM clientes c
+
+        LEFT JOIN pedidos p
+            ON p.cliente_id = c.id
+
+        GROUP BY c.id
+
+        ORDER BY c.id DESC
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+
+    clientes = []
+
+    for r in rows:
+
+        clientes.append({
+
+            "id": r["id"],
+            "nombre": r["nombre"],
+            "telefono": r["telefono"],
+            "direccion": r["direccion"],
+            "referencia": r["referencia"],
+            "pedidos": r["pedidos"]
+
+        })
+
+
+    return clientes
+
+def obtener_cliente_por_id(id):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+
+    cursor.execute("""
+        SELECT
+            id,
+            nombre,
+            telefono,
+            direccion,
+            referencia
+
+        FROM clientes
+
+        WHERE id = ?
+
+    """, (id,))
+
+
+    row = cursor.fetchone()
+
+    conn.close()
+
+
+    if row:
+
+        return dict(row)
+
+    return None
+
+def actualizar_cliente_admin(
+        id,
+        nombre,
+        telefono,
+        direccion,
+        referencia):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+
+    cursor.execute("""
+        UPDATE clientes
+
+        SET
+            nombre=?,
+            telefono=?,
+            direccion=?,
+            referencia=?
+
+        WHERE id=?
+
+    """,
+    (
+        nombre,
+        telefono,
+        direccion,
+        referencia,
+        id
+    ))
+
+
+    conn.commit()
+    conn.close()
+

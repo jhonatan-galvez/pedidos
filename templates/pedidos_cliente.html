@@ -1,0 +1,117 @@
+{% extends "admin/base_admin.html" %}
+
+
+{% block title %}
+Pedidos del cliente
+{% endblock %}
+
+
+
+{% block content %}
+
+
+<div class="erp-container">
+
+
+<div class="erp-header">
+
+<h1 class="erp-title">
+🛒 Pedidos de {{ cliente.nombre }}
+</h1>
+
+
+<a href="/admin/clientes" class="btn-secondary">
+← Clientes
+</a>
+
+
+</div>
+
+
+
+
+
+<div class="product-grid">
+
+
+{% for p in pedidos %}
+
+
+<div class="product-card">
+
+
+<div class="product-header">
+
+<h3 class="product-name">
+
+{{ p.numero }}
+
+</h3>
+
+
+<span class="badge-active">
+
+{{ p.estado }}
+
+</span>
+
+
+</div>
+
+
+
+<div class="product-info">
+
+
+<p>
+<span>Fecha:</span>
+{{ p.fecha }}
+</p>
+
+
+<p>
+<span>Total:</span>
+S/ {{ p.total }}
+</p>
+
+
+</div>
+
+
+
+<div class="product-actions">
+
+<a href="/admin/pedido/{{ p.id }}"
+class="btn-secondary">
+
+Ver detalle
+
+</a>
+
+
+</div>
+
+
+
+</div>
+
+
+{% else %}
+
+
+<p>
+Este cliente todavía no tiene pedidos.
+</p>
+
+
+{% endfor %}
+
+
+
+</div>
+
+
+</div>
+
+
+{% endblock %}

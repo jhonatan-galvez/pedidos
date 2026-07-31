@@ -174,7 +174,49 @@ def obtener_admproductos(activo=None):
 
     return productos
 
+def actualizar_producto(
+        producto_id,
+        producto,
+        marca,
+        tipo,
+        presentacion,
+        stock,
+        precio
+):
 
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+            UPDATE productos
+            SET
+                producto = ?,
+                marca = ?,
+                tipo = ?,
+                presentacion = ?,
+                stock = ?,
+                precio = ?
+            WHERE id = ?
+        """, (
+            producto,
+            marca,
+            tipo,
+            presentacion,
+            stock,
+            precio,
+            producto_id
+        ))
+
+        conn.commit()
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 
 
