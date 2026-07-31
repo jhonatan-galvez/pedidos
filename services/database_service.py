@@ -97,29 +97,18 @@ def inicializar_database():
         CREATE TABLE IF NOT EXISTS pedidos(
 
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             numero TEXT UNIQUE,
-
             cliente_id INTEGER,
-
-            fecha TEXT,
-                   
+            fecha TEXT, 
             estado TEXT,
-
             subtotal REAL,
-
             delivery REAL DEFAULT 0,
-
             descuento REAL DEFAULT 0,
-
             total REAL,
-
-
             observaciones TEXT,
-
             fecha_actualizacion TEXT,
-
             usuario TEXT,
+            tipo_pago TEXT DEFAULT 'Efectivo',
 
             FOREIGN KEY(cliente_id)
             REFERENCES clientes(id)

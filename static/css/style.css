@@ -501,3 +501,95 @@ nav a:hover{
     text-align:center;
     font-weight:500;
 }
+
+.payment-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:16px;
+
+    margin-top:18px;
+    margin-bottom:25px;
+
+}
+
+.payment-option{
+
+    cursor:pointer;
+
+}
+
+.payment-option input{
+
+    display:none;
+
+}
+
+.payment-card{
+
+    border:2px solid #e3e7ed;
+    border-radius:14px;
+    padding:18px;
+
+    background:#fff;
+
+    display:flex;
+    flex-direction:column;
+
+    justify-content:center;
+    align-items:center;
+
+    min-height:130px;
+    transition:.25s ease;
+    overflow:hidden;    
+
+}
+
+.payment-card img{
+
+    width:55px;
+    max-width:55px;
+
+    height:55px;
+    max-height:55px;
+
+    object-fit:contain;
+
+    display:block;
+
+    margin:0 auto 12px auto;
+
+}
+
+
+.payment-card span{
+
+    font-size:16px;
+
+    font-weight:600;
+
+    color:#23354d;
+
+}
+
+.payment-option:hover .payment-card{
+
+    transform:translateY(-2px);
+
+    border-color:#19a64b;
+
+}
+
+.payment-option input:checked + .payment-card{
+
+    border-color:#16a34a;
+    background:#eaf8ef;
+    box-shadow:0 8px 18px rgba(22,163,74,.20);
+}
+
+.payment-option input:checked + .payment-card span{
+    color:#16a34a;
+    font-weight:700;
+}

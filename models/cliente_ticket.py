@@ -6,3 +6,4 @@ class ClienteTicket:
     nombre: str
     telefono: str
     direccion: str
+    tipo_pago: str = ""

@@ -10,6 +10,7 @@ app.use(express.json());
 app.use(cors());
 
 let client = null;
+let whatsappReady = false;
 
 // ==================================================================================
 // CREAR CLIENTE WHATSAPP

@@ -336,7 +336,8 @@ def enviar_ticket_whatsapp(pedido_id):
                 pedido["numero"],
                 pedido["total"],
                 items_count=len(pedido["detalle"]),
-                items_detalle=items_detalle
+                items_detalle=items_detalle,
+                tipo_pago=pedido.get("tipo_pago", "No especificado")
             )
             return jsonify({
                 "ok": True,

@@ -45,7 +45,47 @@
         <input id="telefono" type="text" placeholder="Teléfono / WhatsApp">
         <input id="direccion" type="text" placeholder="Dirección">
         <input id="referencia" type="text" placeholder="Referencia opcional">
-
+        <h3>Forma de pago</h3>
+        <div class="payment-grid">
+            <label class="payment-option">
+                <input type="radio"
+                    name="tipo_pago"
+                    value="Efectivo"
+                    checked>
+                <div class="payment-card">
+                    <img src="/static/img/pagos/efectivo.png">
+                    <span>Efectivo</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio"
+                    name="tipo_pago"
+                    value="Yape">
+                <div class="payment-card">
+                    <img src="/static/img/pagos/yape.png">
+                    <span>Yape</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio"
+                    name="tipo_pago"
+                    value="VISA">
+                <div class="payment-card">
+                    <img src="/static/img/pagos/visa.png">
+                    <span>VISA</span>
+                </div>
+            </label>
+            <label class="payment-option">
+                <input type="radio"
+                    name="tipo_pago"
+                    value="Transferencia">
+                <div class="payment-card">
+                    <img src="/static/img/pagos/transferencia.png">
+                    <span>Transferencia</span>
+                </div>
+            </label>
+        </div>
+        
         <button id="btn-confirmar" class="btn-continuar">Confirmar pedido</button>
 
     </section>
@@ -91,13 +131,12 @@
             cliente:{
 
                 nombre:document.getElementById("nombre").value,
-
                 telefono:document.getElementById("telefono").value,
-
                 direccion:document.getElementById("direccion").value,
-
-                referencia:document.getElementById("referencia").value
-
+                referencia:document.getElementById("referencia").value,
+                tipo_pago: document.querySelector(
+                    'input[name="tipo_pago"]:checked'
+                ).value
             },
 
             carrito:carrito

@@ -16,6 +16,7 @@ class Ticket:
     total: float = 0
     estado: str = ""
     observaciones: str = ""
+    tipo_pago: str = ""
 
     def generar_ticket_pos(self):
         lineas = []
@@ -31,6 +32,7 @@ class Ticket:
 
         lineas.append(f"Cliente: {self.cliente.nombre}")
         lineas.append(f"Teléfono: {self.cliente.telefono}")
+        lineas.append(f"Pago    : {self.cliente.tipo_pago}")
         lineas.append("")
 
         lineas.append("-" * 40)
@@ -80,6 +82,8 @@ class Ticket:
 
         lineas.append("👤 *Cliente*")
         lineas.append(self.cliente.nombre)
+        lineas.append(f"Pago    : {self.cliente.tipo_pago}")
+        lineas.append("")
         lineas.append("")
 
         lineas.append(f"📱 {self.cliente.telefono}")

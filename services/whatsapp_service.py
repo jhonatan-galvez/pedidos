@@ -104,11 +104,15 @@ def obtener_plantilla_confirmacion(
         numero_pedido,
         total,
         items_count,
-        detalle_productos
+        detalle_productos,
+        tipo_pago=None
 ):
+    pago_texto = ""
+
+    if tipo_pago:
+        pago_texto = f"\n💳 Tipo de pago: *{tipo_pago}*\n"
 
     plantillas = [
-
 f"""*¡Pedido recibido!* 
 
 Hola 👋
@@ -116,6 +120,7 @@ Hemos registrado correctamente tu pedido.
 {detalle_productos}
 📋 Pedido: *{numero_pedido}*
 💰 Total: *S/ {total:.2f}*
+{pago_texto}
 🛍️ Productos: *{items_count or 'varios'}*
 
 Muy pronto nos comunicaremos contigo para coordinar la entrega.
@@ -133,6 +138,7 @@ Tu pedido ya fue registrado.
 
 💵 Total:
 *S/ {total:.2f}*
+{pago_texto}
 
 Nos comunicaremos contigo en breve para confirmar los detalles.
 ¡Que tengas un excelente día!
@@ -148,6 +154,7 @@ Número:
 {detalle_productos}
 Monto:
 *S/ {total:.2f}*
+{pago_texto}
 
 Cantidad de productos:
 *{items_count or 'varios'}*
@@ -167,6 +174,7 @@ Tu compra fue registrada correctamente.
 {detalle_productos}
 💰 Total:
 S/ {total:.2f}
+{pago_texto}
 
 Nuestro equipo revisará el pedido y pronto se pondrá en contacto contigo.
 
@@ -184,6 +192,7 @@ Ya tenemos tu pedido.
 {detalle_productos}
 💰 Total:
 S/ {total:.2f}
+{pago_texto}
 
 🛒 Productos:
 {items_count or 'varios'}
@@ -198,7 +207,7 @@ DOÑA FLORI
 
     return random.choice(plantillas)
 
-def enviar_confirmacion_pedido(numero, numero_pedido, total, items_count=None, items_detalle=None):
+def enviar_confirmacion_pedido(numero, numero_pedido, total, items_count=None, items_detalle=None,  tipo_pago=None):
     """Envía confirmación simple de pedido recibido"""
     try:
         numero = limpiar_numero(numero)
@@ -217,11 +226,18 @@ def enviar_confirmacion_pedido(numero, numero_pedido, total, items_count=None, i
             numero_pedido,
             total,
             items_count,
-            detalle_productos
+            detalle_productos,
+            tipo_pago
         )
         
+        #return enviar_mensaje(numero, mensaje.strip())
+        logger.info("===== MENSAJE WHATSAPP FINAL =====")
+        logger.info(mensaje)
+        logger.info("=================================")
+
         return enviar_mensaje(numero, mensaje.strip())
-        
+
+
     except Exception as e:
         logger.error(f"✗ Error enviando confirmación: {str(e)}")
         raise

@@ -13,7 +13,7 @@ def generar_ticket(pedido_id):
     cliente = ClienteTicket(
         nombre=pedido["cliente"]["nombre"],
         telefono=pedido["cliente"]["telefono"],
-        direccion=pedido["cliente"]["direccion"]
+        direccion=pedido["cliente"]["direccion"],
     )
 
     ticket = Ticket(
@@ -25,7 +25,8 @@ def generar_ticket(pedido_id):
         descuento=pedido["descuento"],
         total=pedido["total"],
         estado=pedido["estado"],
-        observaciones=pedido["observaciones"]
+        observaciones=pedido["observaciones"],
+        tipo_pago=pedido["tipo_pago"]
     )
 
     for item in pedido["detalle"]:

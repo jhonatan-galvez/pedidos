@@ -111,12 +111,13 @@ def crear_pedido(datos_cliente, carrito):
                 delivery,
                 descuento,
                 total,
+                tipo_pago,
                 observaciones,
                 fecha_actualizacion,
                 usuario
             )
             VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
 
             numero,
@@ -127,6 +128,7 @@ def crear_pedido(datos_cliente, carrito):
             delivery,
             descuento,
             total,
+            datos_cliente["tipo_pago"],
             datos_cliente.get("observaciones", ""),
             fecha,
             "WEB"
@@ -383,8 +385,8 @@ def obtener_pedido_completo(pedido_id):
             p.delivery,
             p.descuento,
             p.total,
+            p.tipo_pago,
             p.observaciones,
-
             c.nombre,
             c.telefono,
             c.direccion,
@@ -407,7 +409,6 @@ def obtener_pedido_completo(pedido_id):
         return None
 
     pedido = {
-
         "id": row["id"],
         "numero": row["numero"],
         "fecha": row["fecha"],
@@ -417,6 +418,8 @@ def obtener_pedido_completo(pedido_id):
         "descuento": row["descuento"],
         "total": row["total"],
         "observaciones": row["observaciones"],
+
+        "tipo_pago": row["tipo_pago"],
 
         "cliente": {
             "nombre": row["nombre"],
