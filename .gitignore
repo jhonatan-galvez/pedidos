@@ -13,6 +13,7 @@ venv/
 Thumbs.db
 
 # Base de datos
+database/database.db
 database/*.db
 
 # Excel
