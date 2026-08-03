@@ -51,14 +51,10 @@
 
     <div class="container">
 
-        <div class="banner-row">
+        <div class="banner-slider">
 
-            <div class="banner-panel">
-                <img id="banner1" class="home-banner">
-            </div>
+            <div class="banner-track" id="bannerTrack">
 
-            <div class="banner-panel">
-                <img id="banner2" class="home-banner">
             </div>
 
         </div>
@@ -86,54 +82,74 @@
 </section>
 
 <script>
+    const banners = [
 
-const banners = [
+        {% for banner in banners %}
 
-    {% for banner in banners %}
+        "{{ url_for('static', filename='img/banners/' + banner) }}",
 
-    "{{ url_for('static', filename='img/banners/' + banner) }}",
-
-    {% endfor %}
+        {% endfor %}
 
     ];
 
-const img1 = document.getElementById("banner1");
-const img2 = document.getElementById("banner2");
 
-if(banners.length){
+    const track = document.getElementById("bannerTrack");
+    const slider = document.querySelector(".banner-slider");
 
-    let izquierda = 0;
-    let derecha = 1;
 
-    function actualizar(){
+    banners.forEach((banner)=>{
 
-        img1.src = banners[izquierda];
-        img2.src = banners[derecha % banners.length];
+        const div = document.createElement("div");
 
-    }
+        div.className = "banner-panel";
 
-    actualizar();
 
-    if(banners.length > 2){
+        const img = document.createElement("img");
+
+        img.src = banner;
+
+        img.className = "home-banner";
+
+
+        div.appendChild(img);
+
+        track.appendChild(div);
+
+    });
+
+
+    let posicion = 0;
+
+
+    if(banners.length > 1){
 
         setInterval(()=>{
 
-            izquierda++;
-            derecha++;
+            posicion++;
 
-            if(izquierda >= banners.length){
 
-                izquierda = 0;
+            if(posicion >= banners.length){
+
+                posicion = 0;
 
             }
 
-            actualizar();
+
+            const bannerWidth = slider.querySelector(".banner-panel").offsetWidth;
+
+
+            slider.scrollTo({
+
+                left: bannerWidth * posicion,
+
+                behavior:"smooth"
+
+            });
+
 
         },5000);
 
     }
-
-}
 
 </script>
 
