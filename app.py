@@ -60,9 +60,39 @@ inicializar_database()
 ####################################
 # SITIO PUBLICO - CLIENTE
 ####################################
-@app.route("/")
-def inicio():
-    return render_template("index.html")
+@app.get("/")
+def index():
+
+    carpeta = os.path.join(
+        app.static_folder,
+        "img",
+        "banners"
+    )
+
+    banners = []
+
+    if os.path.exists(carpeta):
+
+        banners = sorted([
+
+            archivo
+
+            for archivo in os.listdir(carpeta)
+
+            if archivo.lower().endswith(
+                (".jpg", ".jpeg", ".png", ".webp")
+            )
+
+        ])
+
+    return render_template(
+
+        "index.html",
+
+        banners=banners
+
+    )
+
 
 @app.route("/catalogo")
 def catalogo():

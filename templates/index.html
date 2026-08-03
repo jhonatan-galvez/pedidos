@@ -3,21 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>Doña Flori | Tienda Online</title>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
 <header class="header">
+
     <div class="container nav">
+
         <div class="logo">
 
             <img
                 src="{{ url_for('static', filename='img/logo.png') }}"
-                alt="Doña Flori"
-                class="logo-img">
+                class="logo-img"
+                alt="Doña Flori">
 
             <div class="logo-text">
 
@@ -28,68 +33,109 @@
             </div>
 
         </div>
+
         <nav>
+
             <a href="/">Inicio</a>
+
             <a href="/catalogo">Catálogo</a>
-            <a href="#">Mi pedido</a>
+
         </nav>
+
     </div>
+
 </header>
 
-<section class="hero-desktop">
 
-    <div class="container hero-grid">
+<section class="home-banners">
 
-        <div class="hero-content">
+    <div class="container">
 
-            <h1>
-                Todo lo que necesitas para mantener
-                tu hogar limpio y desinfectado.
-            </h1>
+        <div class="banner-row">
 
-            <p>
-                Compra desde cualquier lugar de forma rápida y segura.
-                Agrega tus productos al carrito y envía tu pedido en pocos minutos.
-            </p>
-
-            <div class="hero-beneficios">
-
-                <div>✔ Productos originales</div>
-
-                <div>✔ Atención personalizada</div>
-
-                <div>✔ Atención rápida</div>
-
+            <div class="banner-panel">
+                <img id="banner1" class="home-banner">
             </div>
 
-            <div class="hero-buttons">
-
-                <a href="/catalogo" class="btn-primary">
-                    Ver catálogo
-                </a>
-
-                <a href="https://wa.me/51980401073"
-                   class="btn-secondary">
-
-                    💬 Contactar
-
-                </a>
-
+            <div class="banner-panel">
+                <img id="banner2" class="home-banner">
             </div>
 
         </div>
 
-        <div class="hero-image">
+        <div class="home-buttons">
 
-            <img
-                src="{{ url_for('static', filename='img/logo.png') }}"
-                alt="Doña Flori">
+            <a href="/catalogo" class="btn-primary">
+
+                Ver catálogo
+
+            </a>
+
+            <a
+                href="https://wa.me/51980401073"
+                class="btn-primary">
+
+                💬 Contactar
+
+            </a>
 
         </div>
 
     </div>
 
 </section>
+
+<script>
+
+const banners = [
+
+    {% for banner in banners %}
+
+    "{{ url_for('static', filename='img/banners/' + banner) }}",
+
+    {% endfor %}
+
+    ];
+
+const img1 = document.getElementById("banner1");
+const img2 = document.getElementById("banner2");
+
+if(banners.length){
+
+    let izquierda = 0;
+    let derecha = 1;
+
+    function actualizar(){
+
+        img1.src = banners[izquierda];
+        img2.src = banners[derecha % banners.length];
+
+    }
+
+    actualizar();
+
+    if(banners.length > 2){
+
+        setInterval(()=>{
+
+            izquierda++;
+            derecha++;
+
+            if(izquierda >= banners.length){
+
+                izquierda = 0;
+
+            }
+
+            actualizar();
+
+        },5000);
+
+    }
+
+}
+
+</script>
 
 </body>
 </html>

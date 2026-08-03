@@ -12,6 +12,9 @@ venv/
 .DS_Store
 Thumbs.db
 
+#Imagenes
+static/img/**
+
 # Base de datos
 database/database.db
 database/*.db
