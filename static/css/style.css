@@ -299,16 +299,19 @@ nav a:hover{
 
 .btn-continuar {
     width: 100%;
-    margin-top: 20px;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
     background: #16a34a;
     color: white;
-    font-weight: bold;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
     font-size: 15px;
+    font-weight: 600;
     cursor: pointer;
-    transition: 0.2s;
+    text-align: center;
+    display: block;
+    text-decoration: none;
+    transition: 0.3s;
 }
 
 .btn-continuar:hover {
@@ -635,4 +638,27 @@ nav a:hover{
     margin-top:35px;
 
     padding-bottom:10px;
+}
+
+.numero-pedido {
+    color: #16a34a;
+    font-size: 40px;
+    margin: 20px 0;
+}
+
+.pedido-final {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70vh;
+}
+
+.pedido-creado {
+    background: white;
+    width: 600px;
+    max-width: 90%;
+    padding: 40px;
+    border-radius: 18px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
 }

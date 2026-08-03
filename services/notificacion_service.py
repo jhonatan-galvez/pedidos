@@ -82,15 +82,15 @@ def procesar_notificacion(pedido_id):
             )
             items_detalle.append(descripcion)
 
-        enviar_confirmacion_pedido(
-
-            pedido["cliente"]["telefono"],
-            pedido["numero"],
-            pedido["total"],
-            items_count=len(pedido["detalle"]),
-            items_detalle=items_detalle,
-            tipo_pago=pedido.get("tipo_pago", "No especificado")
-        )
+        #enviar_confirmacion_pedido(
+        #
+        #   pedido["cliente"]["telefono"],
+        #    pedido["numero"],
+        #    pedido["total"],
+        #    items_count=len(pedido["detalle"]),
+        #    items_detalle=items_detalle,
+        #    tipo_pago=pedido.get("tipo_pago", "No especificado")
+        #)
 
         logger.info(
             f"WhatsApp enviado para {pedido['numero']}"

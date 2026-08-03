@@ -164,11 +164,40 @@
 
         if(resultado.ok){
 
-            alert("Pedido registrado correctamente.\nNúmero: "+resultado.numero);
-
             localStorage.removeItem("carrito");
 
-            window.location.href="/";
+            const numeroPedido = resultado.numero;
+
+            document.querySelector("main").className = "container pedido-final";
+            document.querySelector("main").innerHTML = `
+
+                <section class="pedido-creado">
+
+                    <h2>✅ Pedido registrado correctamente</h2>
+
+                    <p>
+                        Tu número de pedido es:
+                    </p>
+
+                    <h1 class="numero-pedido">
+                        ${numeroPedido}
+                    </h1>
+
+                    <p>
+                        Puedes recibir el resumen de tu pedido por WhatsApp.
+                    </p>
+
+                    <a 
+                    class="btn-continuar"
+                    href="https://wa.me/51980401073?text=${encodeURIComponent(
+                    `Hola Doña Flori. Deseo recibir el resumen de mi pedido ${numeroPedido}`
+                    )}">
+                        💬 Información sobre mi pedido
+                    </a>
+
+                </section>
+
+            `;
 
         }else{
 
