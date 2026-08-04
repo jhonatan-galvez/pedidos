@@ -623,9 +623,11 @@ nav a:hover{
 
 .banner-panel {
 
-    flex: 0 0 calc(50% - 10px);
+    flex:0 0 calc(50% - 12px);
 
-    scroll-snap-align: center;
+    min-width:0;
+
+    scroll-snap-align:start;
 
 }
 
@@ -674,28 +676,22 @@ nav a:hover{
     box-shadow: 0 10px 30px rgba(0,0,0,.08);
 }
 
-@media(max-width:768px){
-
+@media (max-width:768px){
 
     .banner-track{
-
         gap:0;
-
     }
-
 
     .banner-panel{
-
         flex:0 0 100%;
-
+        width:100%;
+        max-width:100%;
     }
 
-
-    .banner-slider{
-
-        overflow-x:auto;
-
+    .home-banner{
+        height:auto;
+        aspect-ratio:16/9;
+        padding:0;
     }
-
 
 }
