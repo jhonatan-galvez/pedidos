@@ -50,11 +50,10 @@
 
 <section class="home-banners">
 
-    <div class="banner-slider">
-        <div class="banner-track" id="bannerTrack"></div>
-    </div>
-
-    <div class="container">
+    <div class="container"></div>
+        <div class="banner-slider">
+            <div class="banner-track" id="bannerTrack"></div>
+        </div>
 
         <div class="home-buttons">
 
@@ -132,19 +131,20 @@
             }
 
 
-            const bannerWidth = slider.querySelector(".banner-panel").offsetWidth;
-
+            const panel = slider.querySelector(".banner-panel");
+            const estilos = window.getComputedStyle(track);
+            const gap = parseInt(estilos.columnGap || estilos.gap) || 0;
 
             slider.scrollTo({
 
-                left: bannerWidth * posicion,
+                left: (panel.offsetWidth + gap) * posicion,
 
                 behavior:"smooth"
 
             });
 
 
-        },5000);
+        },4000);
 
     }
 
