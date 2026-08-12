@@ -60,6 +60,12 @@
                 Pedidos
             </a>
 
+            <a href="/admin/reporte-ventas"
+                class="{% if request.path == '/admin/reporte-ventas' %}active{% endif %}">
+                <i class="fa-solid fa-file-excel"></i>
+                Reportes
+            </a>
+
             <a href="/admin/productos"
                class="{% if request.path == '/admin/productos' %}active{% endif %}">
                 <i class="fa-solid fa-box"></i>

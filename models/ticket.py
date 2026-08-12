@@ -54,11 +54,11 @@ class Ticket:
             f"Subtotal{'':<25}S/{self.subtotal:.2f}"
         )
         lineas.append(
-            f"Delivery{'':<26}S/{self.delivery:.2f}"
+            f"Delivery{'':<25}S/{self.delivery:.2f}"
         )
-        #lineas.append(
-        #    f"Descuento{'':<23}S/{self.descuento:.2f}"
-        #)
+        lineas.append(
+            f"Descuento{'':<21}- S/{self.descuento:.2f}"
+        )
         lineas.append("")
         lineas.append(
             f"TOTAL{'':<28}S/{self.total:.2f}"

@@ -1,0 +1,378 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+Doña Flori | Reporte de Ventas
+{% endblock %}
+
+{% block page_title %}
+Reporte de Ventas
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= FILTROS ================= -->
+
+<div class="panel">
+
+    <form
+        method="GET"
+        action="/admin/reporte-ventas"
+        class="filters"
+    >
+
+        <input
+            type="date"
+            name="desde"
+            class="input"
+            value="{{ desde or '' }}"
+        >
+
+        <input
+            type="date"
+            name="hasta"
+            class="input"
+            value="{{ hasta or '' }}"
+        >
+
+        <button
+            type="submit"
+            class="btn-primary"
+        >
+
+            <i class="fa-solid fa-filter"></i>
+            Generar reporte
+
+        </button>
+
+
+        <a
+            href="/admin/reporte-ventas"
+            class="btn-secondary"
+        >
+
+            Limpiar
+
+        </a>
+
+    </form>
+
+</div>
+
+
+<!-- ================= RESULTADOS ================= -->
+
+{% if reporte|length == 0 %}
+
+<div class="panel">
+
+    <h3>
+        No se encontraron ventas.
+    </h3>
+
+    <p>
+        Selecciona un rango de fechas para consultar
+        las ventas entregadas.
+    </p>
+
+</div>
+
+{% else %}
+
+
+<!-- ================= RESUMEN ================= -->
+
+<div class="panel">
+
+    <div class="order-info">
+
+        <div>
+
+            <strong>
+                Ventas encontradas
+            </strong>
+
+            <p>
+                {{ reporte|length }}
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <strong>
+                Desde
+            </strong>
+
+            <p>
+                {{ desde or 'Todas' }}
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <strong>
+                Hasta
+            </strong>
+
+            <p>
+                {{ hasta or 'Todas' }}
+            </p>
+
+        </div>
+
+
+        <div>
+
+            <strong>
+                Total vendido
+            </strong>
+
+            <p class="order-total">
+
+                S/
+
+                {{
+                    "%.2f"|format(
+                        reporte
+                        |map(attribute="importe")
+                        |sum
+                    )
+                }}
+
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= DESCARGA ================= -->
+
+<div class="panel">
+
+    <div class="order-actions">
+
+        <div>
+
+            <strong>
+                Exportar información
+            </strong>
+
+            <p>
+                Descarga el detalle de las ventas
+                en formato Excel.
+            </p>
+
+        </div>
+
+
+        <a
+            href="{{ url_for(
+                'descargar_reporte_ventas',
+                desde=desde,
+                hasta=hasta
+            ) }}"
+            class="btn-primary"
+        >
+
+            <i class="fa-solid fa-file-excel"></i>
+
+            Descargar Excel
+
+        </a>
+
+    </div>
+
+</div>
+
+
+<!-- ================= TABLA ================= -->
+
+<div class="panel">
+
+    <h3>
+        Detalle de ventas
+    </h3>
+
+
+    <div style="overflow-x:auto;">
+
+        <table
+            style="
+                width:100%;
+                border-collapse:collapse;
+                margin-top:20px;
+            "
+        >
+
+            <thead>
+
+                <tr>
+
+                    <th style="text-align:left; padding:12px;">
+                        Pedido
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Fecha
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Cliente
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Pago
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Producto
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Marca
+                    </th>
+
+                    <th style="text-align:left; padding:12px;">
+                        Presentación
+                    </th>
+
+                    <th style="text-align:center; padding:12px;">
+                        Cant.
+                    </th>
+
+                    <th style="text-align:right; padding:12px;">
+                        Precio
+                    </th>
+
+                    <th style="text-align:right; padding:12px;">
+                        Importe
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% for item in reporte %}
+
+                <tr>
+
+                    <td style="padding:12px;">
+
+                        <strong>
+                            {{ item.numero_pedido }}
+                        </strong>
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.fecha }}
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.cliente }}
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.tipo_pago }}
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.producto }}
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.marca }}
+
+                    </td>
+
+
+                    <td style="padding:12px;">
+
+                        {{ item.presentacion }}
+
+                    </td>
+
+
+                    <td
+                        style="
+                            padding:12px;
+                            text-align:center;
+                        "
+                    >
+
+                        {{ item.cantidad }}
+
+                    </td>
+
+
+                    <td
+                        style="
+                            padding:12px;
+                            text-align:right;
+                        "
+                    >
+
+                        S/
+                        {{ "%.2f"|format(
+                            item.precio_unitario
+                        ) }}
+
+                    </td>
+
+
+                    <td
+                        style="
+                            padding:12px;
+                            text-align:right;
+                        "
+                    >
+
+                        <strong>
+
+                            S/
+                            {{ "%.2f"|format(
+                                item.importe
+                            ) }}
+
+                        </strong>
+
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

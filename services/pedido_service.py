@@ -640,6 +640,120 @@ def actualizar_pedido(pedido_id, datos):
 
         conn.close()
 
+# ======================================================
+# REPORTE DE VENTAS
+# ======================================================
 
+def obtener_reporte_ventas(desde=None, hasta=None):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+
+        sql = """
+            SELECT
+                p.id AS pedido_id,
+                p.numero AS numero_pedido,
+                p.fecha,
+                p.estado,
+                p.tipo_pago,
+
+                c.nombre AS cliente,
+                c.telefono,
+
+                d.producto_codigo AS codigo,
+                d.producto,
+                d.marca,
+                d.presentacion,
+                d.cantidad,
+                d.precio_unitario,
+                d.subtotal AS importe
+
+            FROM pedidos p
+
+            INNER JOIN clientes c
+                ON c.id = p.cliente_id
+
+            INNER JOIN detalle_pedido d
+                ON d.pedido_id = p.id
+
+            WHERE p.estado = 'ENTREGADO'
+        """
+
+        parametros = []
+
+        # =========================
+        # FECHA DESDE
+        # =========================
+
+        if desde:
+
+            sql += """
+                AND DATE(p.fecha) >= DATE(?)
+            """
+
+            parametros.append(desde)
+
+        # =========================
+        # FECHA HASTA
+        # =========================
+
+        if hasta:
+
+            sql += """
+                AND DATE(p.fecha) <= DATE(?)
+            """
+
+            parametros.append(hasta)
+
+        # =========================
+        # ORDEN
+        # =========================
+
+        sql += """
+            ORDER BY
+                p.id DESC,
+                d.id ASC
+        """
+
+        cursor.execute(
+            sql,
+            parametros
+        )
+
+        rows = cursor.fetchall()
+
+        reporte = []
+
+        for row in rows:
+
+            reporte.append({
+
+                "pedido_id": row["pedido_id"],
+                "numero_pedido": row["numero_pedido"],
+                "fecha": row["fecha"],
+                "estado": row["estado"],
+                "tipo_pago": row["tipo_pago"],
+
+                "cliente": row["cliente"],
+                "telefono": row["telefono"],
+
+                "codigo": row["codigo"],
+                "producto": row["producto"],
+                "marca": row["marca"],
+                "presentacion": row["presentacion"],
+
+                "cantidad": row["cantidad"],
+                "precio_unitario": row["precio_unitario"],
+                "importe": row["importe"]
+
+            })
+
+        return reporte
+
+    finally:
+
+        conn.close()
 
 

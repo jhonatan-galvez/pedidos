@@ -1,10 +1,13 @@
 from services.producto_service import actualizar_imagen_producto
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from io import BytesIO
+
 from services.database_service import inicializar_database
 from services.database_service import conectar
 from services.producto_service import obtener_productos, obtener_admproductos
-from services.pedido_service import crear_pedido, obtener_pedidos, obtener_pedido_completo, actualizar_estado_pedido, obtener_dashboard
 from services.sync_service import sincronizar_productos
 from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
@@ -30,12 +33,12 @@ from services.pedido_service import (
     obtener_pedido_completo,
     actualizar_estado_pedido,
     obtener_dashboard,
-    obtener_pedidos_cliente
+    actualizar_pedido,
+    obtener_pedidos_cliente,
+    obtener_reporte_ventas
 )
-from services.pedido_service import (
-    obtener_pedido_completo,
-    actualizar_pedido
-)
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -574,6 +577,204 @@ def editar_pedido(id):
         "admin/editar_pedido.html",
         pedido=pedido
     )
+
+# ======================================================
+# REPORTE DE VENTAS
+# ======================================================
+
+@app.route("/admin/reporte-ventas")
+def reporte_ventas():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    reporte = obtener_reporte_ventas(
+        desde=desde,
+        hasta=hasta
+    )
+
+    return render_template(
+        "admin/reporte_ventas.html",
+        reporte=reporte,
+        desde=desde,
+        hasta=hasta
+    )
+
+
+# ======================================================
+# DESCARGAR REPORTE DE VENTAS EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-ventas/descargar")
+def descargar_reporte_ventas():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    reporte = obtener_reporte_ventas(
+        desde=desde,
+        hasta=hasta
+    )
+
+    # ======================================================
+    # CREAR LIBRO
+    # ======================================================
+
+    wb = Workbook()
+
+    ws = wb.active
+    ws.title = "Ventas"
+
+    # ======================================================
+    # ENCABEZADOS
+    # ======================================================
+
+    encabezados = [
+        "Pedido",
+        "Fecha",
+        "Estado",
+        "Tipo de pago",
+        "Cliente",
+        "Teléfono",
+        "Código",
+        "Producto",
+        "Marca",
+        "Presentación",
+        "Cantidad",
+        "Precio unitario",
+        "Importe"
+    ]
+
+    ws.append(encabezados)
+
+    # Encabezados en negrita
+    for celda in ws[1]:
+        celda.font = Font(bold=True)
+
+    # ======================================================
+    # DATOS
+    # ======================================================
+
+    for item in reporte:
+
+        ws.append([
+            str(item.get("numero_pedido") or ""),
+            str(item.get("fecha") or ""),
+            str(item.get("estado") or ""),
+            str(item.get("tipo_pago") or ""),
+            str(item.get("cliente") or ""),
+            str(item.get("telefono") or ""),
+            str(item.get("codigo") or ""),
+            str(item.get("producto") or ""),
+            str(item.get("marca") or ""),
+            str(item.get("presentacion") or ""),
+            float(item.get("cantidad") or 0),
+            float(item.get("precio_unitario") or 0),
+            float(item.get("importe") or 0)
+        ])
+
+    # ======================================================
+    # FORMATO DE COLUMNAS
+    # ======================================================
+
+    anchos = {
+        "A": 16,
+        "B": 20,
+        "C": 15,
+        "D": 18,
+        "E": 30,
+        "F": 15,
+        "G": 15,
+        "H": 30,
+        "I": 20,
+        "J": 20,
+        "K": 12,
+        "L": 18,
+        "M": 18
+    }
+
+    for columna, ancho in anchos.items():
+        ws.column_dimensions[columna].width = ancho
+
+    # ======================================================
+    # FORMATO MONEDA
+    # ======================================================
+
+    for fila in range(2, ws.max_row + 1):
+
+        ws[f"L{fila}"].number_format = '"S/" #,##0.00'
+        ws[f"M{fila}"].number_format = '"S/" #,##0.00'
+
+    # ======================================================
+    # FORMATO GENERAL
+    # ======================================================
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+    # ======================================================
+    # GUARDAR EN MEMORIA
+    # ======================================================
+
+    archivo = BytesIO()
+
+    wb.save(archivo)
+
+    archivo.seek(0)
+
+    # ======================================================
+    # VALIDAR QUE EL XLSX SE PUEDA ABRIR
+    # ======================================================
+
+    try:
+
+        from openpyxl import load_workbook
+
+        archivo_prueba = BytesIO(archivo.getvalue())
+
+        libro_prueba = load_workbook(
+            archivo_prueba,
+            read_only=True
+        )
+
+        libro_prueba.close()
+
+        archivo.seek(0)
+
+    except Exception as e:
+
+        logger.error(
+            f"Error validando reporte Excel: {str(e)}"
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "El archivo Excel generado no es válido.",
+            "detalle": str(e)
+        }), 500
+
+    # ======================================================
+    # NOMBRE DEL ARCHIVO
+    # ======================================================
+
+    nombre = "reporte_ventas"
+
+    if desde and hasta:
+        nombre += f"_{desde}_a_{hasta}"
+
+    nombre += ".xlsx"
+
+    # ======================================================
+    # DESCARGA
+    # ======================================================
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name=nombre,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
 
 
