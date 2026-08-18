@@ -756,4 +756,103 @@ def obtener_reporte_ventas(desde=None, hasta=None):
 
         conn.close()
 
+# ======================================================
+# REPORTE - VENTAS POR PRODUCTO
+# ======================================================
+
+def obtener_ventas_por_producto(desde=None, hasta=None):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    sql = """
+        SELECT
+
+            dp.producto_codigo,
+            dp.producto,
+            dp.marca,
+            dp.presentacion,
+
+            SUM(dp.cantidad) AS cantidad_vendida,
+
+            SUM(dp.subtotal) AS importe_vendido
+
+        FROM detalle_pedido dp
+
+        INNER JOIN pedidos p
+            ON p.id = dp.pedido_id
+
+        WHERE p.estado = 'ENTREGADO'
+    """
+
+    parametros = []
+
+    # ============================================
+    # FECHA DESDE
+    # ============================================
+
+    if desde:
+
+        sql += """
+            AND DATE(p.fecha) >= DATE(?)
+        """
+
+        parametros.append(desde)
+
+    # ============================================
+    # FECHA HASTA
+    # ============================================
+
+    if hasta:
+
+        sql += """
+            AND DATE(p.fecha) <= DATE(?)
+        """
+
+        parametros.append(hasta)
+
+    # ============================================
+    # AGRUPAR
+    # ============================================
+
+    sql += """
+        GROUP BY
+            dp.producto_codigo,
+            dp.producto,
+            dp.marca,
+            dp.presentacion
+
+        ORDER BY
+            cantidad_vendida DESC
+    """
+
+    cursor.execute(sql, parametros)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    ventas = []
+
+    for row in rows:
+
+        ventas.append({
+
+            "codigo": row["producto_codigo"],
+
+            "producto": row["producto"],
+
+            "marca": row["marca"],
+
+            "presentacion": row["presentacion"],
+
+            "cantidad": row["cantidad_vendida"],
+
+            "importe": row["importe_vendido"]
+
+        })
+
+    return ventas
+
+
 

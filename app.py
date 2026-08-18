@@ -35,7 +35,8 @@ from services.pedido_service import (
     obtener_dashboard,
     actualizar_pedido,
     obtener_pedidos_cliente,
-    obtener_reporte_ventas
+    obtener_reporte_ventas,
+    obtener_ventas_por_producto
 )
 
 
@@ -772,6 +773,85 @@ def descargar_reporte_ventas():
         archivo,
         as_attachment=True,
         download_name=nombre,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ======================================================
+# REPORTE - VENTAS POR PRODUCTO
+# ======================================================
+
+@app.route("/admin/reporte-productos")
+def reporte_productos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    ventas = obtener_ventas_por_producto(
+        desde=desde,
+        hasta=hasta
+    )
+
+    return render_template(
+        "admin/reporte_productos.html",
+        ventas=ventas,
+        desde=desde,
+        hasta=hasta
+    )
+
+# ======================================================
+# DESCARGAR REPORTE DE VENTAS POR PRODUCTO EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-productos/excel")
+def descargar_reporte_productos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    ventas = obtener_ventas_por_producto(
+        desde=desde,
+        hasta=hasta
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for item in ventas:
+
+        datos.append({
+
+            "Código": item["codigo"],
+            "Producto": item["producto"],
+            "Marca": item["marca"],
+            "Presentación": item["presentacion"],
+            "Cantidad vendida": item["cantidad"],
+            "Importe total": item["importe"]
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Ventas por Producto"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_ventas_por_producto.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 

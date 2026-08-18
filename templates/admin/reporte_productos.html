@@ -1,0 +1,523 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+Doña Flori | Ventas por Producto
+{% endblock %}
+
+{% block page_title %}
+Ventas por Producto
+{% endblock %}
+
+{% block content %}
+
+<!-- =====================================================
+     FILTROS
+===================================================== -->
+
+<div class="panel">
+
+    <form
+        method="GET"
+        action="/admin/reporte-productos"
+        class="filters">
+
+        <div>
+
+            <label>
+                Desde
+            </label>
+
+            <input
+                type="date"
+                name="desde"
+                class="input"
+                value="{{ desde or '' }}">
+
+        </div>
+
+
+        <div>
+
+            <label>
+                Hasta
+            </label>
+
+            <input
+                type="date"
+                name="hasta"
+                class="input"
+                value="{{ hasta or '' }}">
+
+        </div>
+
+
+        <button
+            type="submit"
+            class="btn-primary">
+
+            <i class="fa-solid fa-chart-column"></i>
+
+            Consultar
+
+        </button>
+
+
+        <a
+            href="/admin/reporte-productos"
+            class="btn-secondary">
+
+            Limpiar
+
+        </a>
+
+    </form>
+
+</div>
+
+
+<!-- =====================================================
+     INFORMACIÓN
+===================================================== -->
+
+<div class="panel">
+
+    <h3>
+        Ventas por producto
+    </h3>
+
+    <p style="margin-top: 6px; color: #777;">
+
+        Se muestran únicamente productos vendidos en pedidos
+        <strong>ENTREGADOS</strong>.
+
+        {% if desde or hasta %}
+
+            Rango:
+
+            <strong>
+                {{ desde or 'Inicio' }}
+            </strong>
+
+            hasta
+
+            <strong>
+                {{ hasta or 'Hoy' }}
+            </strong>
+
+        {% endif %}
+
+    </p>
+
+</div>
+
+
+<!-- =====================================================
+     SIN RESULTADOS
+===================================================== -->
+
+{% if ventas|length == 0 %}
+
+<div class="panel">
+
+    <h3>
+        No se encontraron ventas.
+    </h3>
+
+    <p>
+        Prueba con otro rango de fechas.
+    </p>
+
+</div>
+
+
+{% else %}
+
+<!-- =====================================================
+     RESUMEN
+===================================================== -->
+
+<div class="panel">
+
+    <div class="order-info">
+
+
+        <!-- PRODUCTOS -->
+
+        <div>
+
+            <strong>
+                Productos vendidos
+            </strong>
+
+            <p>
+
+                {{ ventas|length }}
+
+            </p>
+
+        </div>
+
+
+        <!-- UNIDADES -->
+
+        <div>
+
+            <strong>
+                Unidades vendidas
+            </strong>
+
+            <p>
+
+                {{
+                    ventas
+                    |map(attribute="cantidad")
+                    |sum
+                }}
+
+            </p>
+
+        </div>
+
+
+        <!-- IMPORTE -->
+
+        <div>
+
+            <strong>
+                Importe vendido
+            </strong>
+
+            <p class="order-total">
+
+                S/
+
+                {{
+                    "%.2f"|format(
+                        ventas
+                        |map(attribute="importe")
+                        |sum
+                    )
+                }}
+
+            </p>
+
+        </div>
+
+
+    </div>
+
+</div>
+
+<div class="panel">
+
+    <div class="order-actions">
+
+        <div>
+
+            <strong>
+                Exportar
+            </strong>
+
+            <p>
+                Descargar en formato Excel.
+            </p>
+
+        </div>
+
+        <a
+            href="{{ url_for(
+                'descargar_reporte_productos',
+                desde=desde,
+                hasta=hasta
+            ) }}"
+            class="btn-primary">
+
+            <i class="fa-solid fa-file-excel"></i>
+
+            Descargar Excel
+
+        </a>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     TABLA
+===================================================== -->
+
+<div class="panel">
+
+    <div
+        style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            margin-bottom:20px;
+        "
+    >
+
+        <div>
+
+            <h3>
+                Productos vendidos
+            </h3>
+
+            <p style="color:#777; margin-top:5px;">
+
+                Ordenados de mayor a menor cantidad vendida.
+
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <div style="overflow-x:auto;">
+
+        <table
+            style="
+                width:100%;
+                border-collapse:collapse;
+                margin-top:10px;
+            "
+        >
+
+            <thead>
+
+                <tr>
+
+                    <th
+                        style="
+                            text-align:left;
+                            padding:12px;
+                        "
+                    >
+                        Código
+                    </th>
+
+
+                    <th
+                        style="
+                            text-align:left;
+                            padding:12px;
+                        "
+                    >
+                        Producto
+                    </th>
+
+
+                    <th
+                        style="
+                            text-align:left;
+                            padding:12px;
+                        "
+                    >
+                        Marca
+                    </th>
+
+
+                    <th
+                        style="
+                            text-align:left;
+                            padding:12px;
+                        "
+                    >
+                        Presentación
+                    </th>
+
+
+                    <th
+                        style="
+                            text-align:center;
+                            padding:12px;
+                        "
+                    >
+                        Cantidad vendida
+                    </th>
+
+
+                    <th
+                        style="
+                            text-align:right;
+                            padding:12px;
+                        "
+                    >
+                        Importe vendido
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            <tbody>
+
+                {% for item in ventas %}
+
+                <tr>
+
+
+                    <!-- CÓDIGO -->
+
+                    <td style="padding:12px;">
+
+                        {{ item.codigo }}
+
+                    </td>
+
+
+                    <!-- PRODUCTO -->
+
+                    <td style="padding:12px;">
+
+                        <strong>
+
+                            {{ item.producto }}
+
+                        </strong>
+
+                    </td>
+
+
+                    <!-- MARCA -->
+
+                    <td style="padding:12px;">
+
+                        {{ item.marca }}
+
+                    </td>
+
+
+                    <!-- PRESENTACIÓN -->
+
+                    <td style="padding:12px;">
+
+                        {{ item.presentacion }}
+
+                    </td>
+
+
+                    <!-- CANTIDAD -->
+
+                    <td
+                        style="
+                            padding:12px;
+                            text-align:center;
+                        "
+                    >
+
+                        <strong>
+
+                            {{ item.cantidad }}
+
+                        </strong>
+
+                    </td>
+
+
+                    <!-- IMPORTE -->
+
+                    <td
+                        style="
+                            padding:12px;
+                            text-align:right;
+                        "
+                    >
+
+                        <strong>
+
+                            S/
+
+                            {{
+                                "%.2f"|format(
+                                    item.importe
+                                )
+                            }}
+
+                        </strong>
+
+                    </td>
+
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+
+            <!-- =================================================
+                 TOTAL
+            ================================================== -->
+
+            <tfoot>
+
+                <tr>
+
+                    <td
+                        colspan="4"
+                        style="
+                            padding:14px;
+                            text-align:right;
+                            font-weight:600;
+                        "
+                    >
+
+                        TOTAL
+
+                    </td>
+
+
+                    <td
+                        style="
+                            padding:14px;
+                            text-align:center;
+                            font-weight:600;
+                        "
+                    >
+
+                        {{
+                            ventas
+                            |map(attribute="cantidad")
+                            |sum
+                        }}
+
+                    </td>
+
+
+                    <td
+                        style="
+                            padding:14px;
+                            text-align:right;
+                            font-weight:700;
+                        "
+                    >
+
+                        S/
+
+                        {{
+                            "%.2f"|format(
+                                ventas
+                                |map(attribute="importe")
+                                |sum
+                            )
+                        }}
+
+                    </td>
+
+                </tr>
+
+            </tfoot>
+
+        </table>
+
+    </div>
+
+</div>
+
+
+{% endif %}
+
+{% endblock %}
