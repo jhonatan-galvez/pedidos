@@ -1,0 +1,173 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+Doña Flori | Movimientos de Stock
+{% endblock %}
+
+{% block page_title %}
+Movimientos de Stock
+{% endblock %}
+
+{% block content %}
+
+<!-- =====================================================
+     FILTROS
+===================================================== -->
+
+<div class="panel">
+
+    <form method="GET" action="/admin/reporte-movimientos" class="filters">
+
+        <div>
+            <label>Desde</label>
+            <input type="date" name="desde" class="input" value="{{ desde or '' }}">
+        </div>
+
+        <div>
+            <label>Hasta</label>
+            <input type="date" name="hasta" class="input" value="{{ hasta or '' }}">
+        </div>
+
+        <div>
+            <label>Tipo</label>
+            <select name="tipo" class="input">
+                <option value="">Todos</option>
+                <option value="VENTA" {% if tipo=="VENTA" %}selected{% endif %}>Venta (entrega)</option>
+                <option value="COMPRA" {% if tipo=="COMPRA" %}selected{% endif %}>Compra</option>
+                <option value="MERMA" {% if tipo=="MERMA" %}selected{% endif %}>Merma</option>
+                <option value="REGULARIZACION" {% if tipo=="REGULARIZACION" %}selected{% endif %}>Regularización</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn-primary">
+            <i class="fa-solid fa-filter"></i>
+            Consultar
+        </button>
+
+        <a href="/admin/reporte-movimientos" class="btn-secondary">
+            Limpiar
+        </a>
+
+    </form>
+
+</div>
+
+{% if movimientos|length == 0 %}
+
+<div class="panel">
+    <h3>No se encontraron movimientos.</h3>
+    <p>Prueba con otro rango de fechas o tipo.</p>
+</div>
+
+{% else %}
+
+<!-- =====================================================
+     EXPORTAR
+===================================================== -->
+
+<div class="panel">
+
+    <div class="order-actions">
+
+        <div>
+            <strong>Exportar</strong>
+            <p>{{ movimientos|length }} movimiento(s) encontrados.</p>
+        </div>
+
+        <a
+            href="{{ url_for(
+                'descargar_reporte_movimientos',
+                desde=desde,
+                hasta=hasta,
+                tipo=tipo
+            ) }}"
+            class="btn-primary">
+
+            <i class="fa-solid fa-file-excel"></i>
+            Descargar Excel
+
+        </a>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     TABLA
+===================================================== -->
+
+<div class="panel">
+
+    <div style="overflow-x:auto;">
+
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:12px;">Fecha</th>
+                    <th style="text-align:left; padding:12px;">Tipo</th>
+                    <th style="text-align:left; padding:12px;">Producto</th>
+                    <th style="text-align:center; padding:12px;">Cantidad</th>
+                    <th style="text-align:center; padding:12px;">Antes</th>
+                    <th style="text-align:center; padding:12px;">Después</th>
+                    <th style="text-align:center; padding:12px;">Pedido</th>
+                    <th style="text-align:left; padding:12px;">Observación</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for m in movimientos %}
+                <tr>
+                    <td style="padding:12px;">{{ m.fecha }}</td>
+
+                    <td style="padding:12px;">
+                        {% if m.tipo == "VENTA" %}
+                            Venta
+                        {% elif m.tipo == "COMPRA" %}
+                            Compra
+                        {% elif m.tipo == "MERMA" %}
+                            Merma
+                        {% elif m.tipo == "REGULARIZACION" %}
+                            Regularización
+                        {% else %}
+                            {{ m.tipo }}
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:12px;">
+                        <strong>{{ m.producto or m.producto_codigo }}</strong><br>
+                        <span style="color:#777; font-size:0.85em;">{{ m.producto_codigo }}</span>
+                    </td>
+
+                    <td style="padding:12px; text-align:center;">
+                        {{ "+" if m.cantidad > 0 else "" }}{{ m.cantidad }}
+                    </td>
+
+                    <td style="padding:12px; text-align:center;">{{ m.stock_anterior }}</td>
+                    <td style="padding:12px; text-align:center;"><strong>{{ m.stock_nuevo }}</strong></td>
+
+                    <td style="padding:12px; text-align:center;">
+                        {% if m.pedido_id %}
+                            <a href="/admin/pedido/{{ m.pedido_id }}">#{{ m.pedido_id }}</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+
+                    <td style="padding:12px; color:#777;">{{ m.observacion or "-" }}</td>
+
+                </tr>
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

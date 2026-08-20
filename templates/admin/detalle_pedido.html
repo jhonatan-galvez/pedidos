@@ -215,6 +215,9 @@
 
     <div class="erp-status-update">
 
+        <form method="POST"
+            action="/admin/pedido/{{ pedido.id }}/estado">
+
             <select name="estado" class="input">
 
                 <option value="PENDIENTE"
@@ -247,6 +250,8 @@
             <button class="btn-primary" type="submit">
                 Guardar cambios
             </button>
+
+        </form>
 
     </div>
 

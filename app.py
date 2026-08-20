@@ -7,7 +7,8 @@ from io import BytesIO
 
 from services.database_service import inicializar_database
 from services.database_service import conectar
-from services.producto_service import obtener_productos, obtener_admproductos
+from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario
+from services.stock_service import ajustar_stock_manual, obtener_movimientos_producto, obtener_reporte_movimientos
 from services.sync_service import sincronizar_productos
 from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
@@ -465,7 +466,7 @@ def editar_producto(id):
             request.form["marca"],
             request.form["tipo"],
             request.form["presentacion"],
-            request.form["stock"],
+            producto["stock"],
             request.form["precio"]
         )
 
@@ -475,6 +476,55 @@ def editar_producto(id):
     return render_template(
         "admin/editar_producto.html",
         producto=producto
+    )
+
+# ======================================================
+# AJUSTE MANUAL DE STOCK (compras, mermas, regularización)
+# ======================================================
+@app.route("/admin/productos/<int:id>/ajustar-stock", methods=["GET", "POST"])
+def ajustar_stock(id):
+
+    productos = obtener_admproductos()
+
+    producto = next(
+        (p for p in productos if p["id"] == id),
+        None
+    )
+
+    if producto is None:
+        return "Producto no encontrado", 404
+
+    if request.method == "POST":
+
+        tipo = request.form["tipo"]
+        cantidad = int(request.form["cantidad"])
+        observacion = request.form.get("observacion", "")
+
+        try:
+            ajustar_stock_manual(
+                producto["codigo"],
+                tipo,
+                cantidad,
+                observacion
+            )
+        except ValueError as e:
+            movimientos = obtener_movimientos_producto(producto["codigo"])
+            return render_template(
+                "admin/ajustar_stock.html",
+                producto=producto,
+                movimientos=movimientos,
+                error=str(e)
+            )
+
+        return redirect("/admin/productos")
+
+    movimientos = obtener_movimientos_producto(producto["codigo"])
+
+    return render_template(
+        "admin/ajustar_stock.html",
+        producto=producto,
+        movimientos=movimientos,
+        error=None
     )
 
 @app.route("/admin/clientes")
@@ -855,7 +905,159 @@ def descargar_reporte_productos():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
+# ======================================================
+# REPORTE DE INVENTARIO ACTUAL
+# ======================================================
 
+@app.route("/admin/reporte-inventario")
+def reporte_inventario():
+
+    inventario = obtener_reporte_inventario()
+
+    return render_template(
+        "admin/reporte_inventario.html",
+        inventario=inventario
+    )
+
+# ======================================================
+# DESCARGAR REPORTE DE INVENTARIO EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-inventario/excel")
+def descargar_reporte_inventario():
+
+    inventario = obtener_reporte_inventario()
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for item in inventario:
+
+        datos.append({
+
+            "Código": item["codigo"],
+            "Producto": item["producto"],
+            "Marca": item["marca"],
+            "Presentación": item["presentacion"],
+            "Stock actual": item["stock"],
+            "Precio": item["precio"],
+            "Valor en stock": item["valor_stock"]
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Inventario"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_inventario.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ======================================================
+# REPORTE DE MOVIMIENTOS DE STOCK
+# ======================================================
+
+@app.route("/admin/reporte-movimientos")
+def reporte_movimientos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo = request.args.get("tipo")
+
+    movimientos = obtener_reporte_movimientos(
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+    return render_template(
+        "admin/reporte_movimientos.html",
+        movimientos=movimientos,
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+# ======================================================
+# DESCARGAR REPORTE DE MOVIMIENTOS EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-movimientos/excel")
+def descargar_reporte_movimientos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo = request.args.get("tipo")
+
+    movimientos = obtener_reporte_movimientos(
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for m in movimientos:
+
+        datos.append({
+
+            "Fecha": m["fecha"],
+            "Tipo": m["tipo"],
+            "Código": m["producto_codigo"],
+            "Producto": m["producto"],
+            "Marca": m["marca"],
+            "Cantidad": m["cantidad"],
+            "Stock anterior": m["stock_anterior"],
+            "Stock nuevo": m["stock_nuevo"],
+            "Pedido": m["pedido_id"] or "",
+            "Observación": m["observacion"] or ""
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Movimientos de Stock"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_movimientos_stock.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 

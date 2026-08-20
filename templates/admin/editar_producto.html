@@ -212,9 +212,15 @@
 
                     <input
                         type="number"
-                        name="stock"
                         value="{{ producto.stock }}"
-                        min="0">
+                        disabled>
+
+                    <p style="color:#777; font-size:0.85em; margin-top:4px;">
+                        El stock no se edita aquí para no perder el historial.
+                        <a href="/admin/productos/{{ producto.id }}/ajustar-stock">
+                            Ajustar stock →
+                        </a>
+                    </p>
 
                 </div>
 

@@ -1,0 +1,189 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+Doña Flori | Inventario
+{% endblock %}
+
+{% block page_title %}
+Inventario
+{% endblock %}
+
+{% block content %}
+
+<!-- =====================================================
+     INFORMACIÓN
+===================================================== -->
+
+<div class="panel">
+
+    <h3>
+        Inventario actual de stock
+    </h3>
+
+    <p style="margin-top: 6px; color: #777;">
+
+        Muestra el stock disponible de cada producto
+        <strong>en este momento</strong> (fotografía actual,
+        no depende de un rango de fechas).
+
+    </p>
+
+</div>
+
+
+{% if inventario|length == 0 %}
+
+<div class="panel">
+
+    <h3>
+        No hay productos activos.
+    </h3>
+
+</div>
+
+{% else %}
+
+<!-- =====================================================
+     RESUMEN
+===================================================== -->
+
+<div class="panel">
+
+    <div class="order-info">
+
+        <div>
+            <strong>Productos</strong>
+            <p>{{ inventario|length }}</p>
+        </div>
+
+        <div>
+            <strong>Unidades en stock</strong>
+            <p>
+                {{ inventario|map(attribute="stock")|sum }}
+            </p>
+        </div>
+
+        <div>
+            <strong>Valor total en stock</strong>
+            <p class="order-total">
+                S/
+                {{
+                    "%.2f"|format(
+                        inventario
+                        |map(attribute="valor_stock")
+                        |sum
+                    )
+                }}
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+<div class="panel">
+
+    <div class="order-actions">
+
+        <div>
+            <strong>Exportar</strong>
+            <p>Descargar en formato Excel.</p>
+        </div>
+
+        <a
+            href="{{ url_for('descargar_reporte_inventario') }}"
+            class="btn-primary">
+
+            <i class="fa-solid fa-file-excel"></i>
+            Descargar Excel
+
+        </a>
+
+    </div>
+
+</div>
+
+<!-- =====================================================
+     TABLA
+===================================================== -->
+
+<div class="panel">
+
+    <h3>Detalle de stock</h3>
+
+    <div style="overflow-x:auto;">
+
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:12px;">Código</th>
+                    <th style="text-align:left; padding:12px;">Producto</th>
+                    <th style="text-align:left; padding:12px;">Marca</th>
+                    <th style="text-align:left; padding:12px;">Presentación</th>
+                    <th style="text-align:center; padding:12px;">Stock</th>
+                    <th style="text-align:right; padding:12px;">Precio</th>
+                    <th style="text-align:right; padding:12px;">Valor en stock</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                {% for item in inventario %}
+
+                <tr {% if item.stock <= 0 %}style="background:#fdecea;"{% elif item.stock <= 5 %}style="background:#fff8e1;"{% endif %}>
+
+                    <td style="padding:12px;">{{ item.codigo }}</td>
+                    <td style="padding:12px;"><strong>{{ item.producto }}</strong></td>
+                    <td style="padding:12px;">{{ item.marca }}</td>
+                    <td style="padding:12px;">{{ item.presentacion }}</td>
+
+                    <td style="padding:12px; text-align:center;">
+                        <strong>{{ item.stock }}</strong>
+                    </td>
+
+                    <td style="padding:12px; text-align:right;">
+                        S/ {{ "%.2f"|format(item.precio) }}
+                    </td>
+
+                    <td style="padding:12px; text-align:right;">
+                        <strong>S/ {{ "%.2f"|format(item.valor_stock) }}</strong>
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+            <tfoot>
+                <tr>
+                    <td colspan="4" style="padding:14px; text-align:right; font-weight:600;">
+                        TOTAL
+                    </td>
+                    <td style="padding:14px; text-align:center; font-weight:600;">
+                        {{ inventario|map(attribute="stock")|sum }}
+                    </td>
+                    <td></td>
+                    <td style="padding:14px; text-align:right; font-weight:700;">
+                        S/
+                        {{
+                            "%.2f"|format(
+                                inventario
+                                |map(attribute="valor_stock")
+                                |sum
+                            )
+                        }}
+                    </td>
+                </tr>
+            </tfoot>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endif %}
+
+{% endblock %}

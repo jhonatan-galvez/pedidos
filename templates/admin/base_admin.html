@@ -72,6 +72,18 @@
                 Ventas por Producto
             </a>
 
+            <a href="/admin/reporte-inventario"
+                class="{% if request.path == '/admin/reporte-inventario' %}active{% endif %}">
+                <i class="fa-solid fa-boxes-stacked"></i>
+                Inventario
+            </a>
+
+            <a href="/admin/reporte-movimientos"
+                class="{% if request.path == '/admin/reporte-movimientos' %}active{% endif %}">
+                <i class="fa-solid fa-right-left"></i>
+                Mov. de Stock
+            </a>
+
             <a href="/admin/productos"
                class="{% if request.path == '/admin/productos' %}active{% endif %}">
                 <i class="fa-solid fa-box"></i>

@@ -174,6 +174,45 @@ def obtener_admproductos(activo=None):
 
     return productos
 
+# ======================================================
+# REPORTE DE INVENTARIO ACTUAL
+# ======================================================
+def obtener_reporte_inventario():
+ 
+    conn = conectar()
+    cursor = conn.cursor()
+ 
+    cursor.execute("""
+        SELECT codigo, producto, marca, tipo, presentacion, stock, precio
+        FROM productos
+        WHERE activo = 1
+        ORDER BY producto
+    """)
+ 
+    rows = cursor.fetchall()
+    conn.close()
+ 
+    inventario = []
+ 
+    for r in rows:
+ 
+        stock = r["stock"] or 0
+        precio = r["precio"] or 0
+ 
+        inventario.append({
+            "codigo": r["codigo"],
+            "producto": r["producto"],
+            "marca": r["marca"],
+            "tipo": r["tipo"],
+            "presentacion": r["presentacion"],
+            "stock": stock,
+            "precio": precio,
+            "valor_stock": stock * precio
+        })
+ 
+    return inventario
+ 
+ 
 def actualizar_producto(
         producto_id,
         producto,

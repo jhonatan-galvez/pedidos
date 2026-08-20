@@ -7,6 +7,7 @@ from services.cliente_service import (
     actualizar_cliente
 )
 from services.producto_service import obtener_productos
+from services.stock_service import descontar_stock_pedido
 
 # ======================================================
 # GENERAR NÚMERO DE PEDIDO
@@ -449,6 +450,21 @@ def actualizar_estado_pedido(pedido_id, estado):
 
     try:
 
+        # ============================================
+        # ESTADO ANTERIOR (para saber si ya se
+        # había descontado stock antes)
+        # ============================================
+        cursor.execute("""
+            SELECT estado FROM pedidos WHERE id = ?
+        """, (pedido_id,))
+
+        row = cursor.fetchone()
+
+        if row is None:
+            return False
+
+        estado_anterior = row["estado"]
+
         fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
@@ -464,6 +480,15 @@ def actualizar_estado_pedido(pedido_id, estado):
             pedido_id
 
         ))
+
+        # ============================================
+        # DESCONTAR STOCK
+        # Solo si pasa a ENTREGADO y antes NO estaba
+        # ENTREGADO (evita descuento doble)
+        # ============================================
+        if estado == ENTREGADO and estado_anterior != ENTREGADO:
+
+            descontar_stock_pedido(cursor, pedido_id)
 
         conn.commit()
 

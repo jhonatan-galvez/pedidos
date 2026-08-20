@@ -201,51 +201,15 @@ delivered
 
     <div class="order-actions">
 
-        <form
-            method="POST"
-            action="/admin/pedido/{{ pedido.id }}/estado">
-
-            <select
-                name="estado"
-                class="input">
-
-                <option value="PENDIENTE"
-                {% if pedido.estado=="PENDIENTE" %}selected{% endif %}>
-                Pendiente
-                </option>
-
-                <option value="PREPARANDO"
-                {% if pedido.estado=="PREPARANDO" %}selected{% endif %}>
-                Preparando
-                </option>
-
-                <option value="EN_CAMINO"
-                {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
-                En camino
-                </option>
-
-                <option value="ENTREGADO"
-                {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
-                Entregado
-                </option>
-
-            </select>
-
-            <button
-                type="submit"
-                class="btn-primary">
-
-                Guardar estado
-
-            </button>
-
-        </form>
+        <span class="badge-active">
+            {{ pedido.estado }}
+        </span>
 
         <a
             href="/admin/pedido/{{ pedido.id }}"
             class="detail-link">
 
-            Ver detalle →
+            Ver detalle / Cambiar estado →
 
         </a>
 
