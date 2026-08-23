@@ -599,7 +599,7 @@ def editar_pedido(id):
     pedido = obtener_pedido_completo(id)
 
     if pedido is None:
-        return "Pedido no encontrado"
+        return "Pedido no encontrado", 404
 
 
     if request.method == "POST":
@@ -612,21 +612,53 @@ def editar_pedido(id):
 
         }
 
+        ids = request.form.getlist("item_id")
+        codigos = request.form.getlist("item_codigo")
+        cantidades = request.form.getlist("item_cantidad")
+        eliminados = request.form.getlist("item_eliminar")
 
-        actualizar_pedido(
-            id,
-            datos
-        )
+        items = []
 
+        for i in range(len(codigos)):
+
+            items.append({
+                "id": int(ids[i]) if ids[i] else None,
+                "codigo": codigos[i],
+                "cantidad": int(cantidades[i]) if cantidades[i] else 0,
+                "eliminar": eliminados[i] == "1"
+            })
+
+        try:
+
+            actualizar_pedido(id, datos, items)
+
+        except ValueError as e:
+
+            pedido = obtener_pedido_completo(id)
+
+            return render_template(
+                "admin/editar_pedido.html",
+                pedido=pedido,
+                error=str(e)
+            )
 
         return redirect(
             f"/admin/pedido/{id}"
         )
 
 
+    if pedido["estado"] == "ENTREGADO":
+
+        return render_template(
+            "admin/editar_pedido.html",
+            pedido=pedido,
+            error="Este pedido ya fue ENTREGADO y no se puede editar."
+        )
+
     return render_template(
         "admin/editar_pedido.html",
-        pedido=pedido
+        pedido=pedido,
+        error=None
     )
 
 # ======================================================

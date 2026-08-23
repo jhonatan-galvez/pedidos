@@ -382,6 +382,7 @@ def obtener_pedido_completo(pedido_id):
 
             p.id,
             p.numero,
+            p.cliente_id,
             p.fecha,
             p.estado,
             p.subtotal,
@@ -414,6 +415,7 @@ def obtener_pedido_completo(pedido_id):
     pedido = {
         "id": row["id"],
         "numero": row["numero"],
+        "cliente_id": row["cliente_id"],
         "fecha": row["fecha"],
         "estado": row["estado"],
         "subtotal": row["subtotal"],
@@ -612,14 +614,35 @@ def obtener_pedidos_cliente(cliente_id):
 # EDITAR PEDIDO
 # ======================================================
 
-def actualizar_pedido(pedido_id, datos):
+def actualizar_pedido(pedido_id, datos, items):
 
     conn = conectar()
     cursor = conn.cursor()
 
-
     try:
 
+        # ============================================
+        # BLOQUEO: no se edita un pedido ya ENTREGADO
+        # (el stock ya se descontó con esos datos)
+        # ============================================
+        cursor.execute("""
+            SELECT estado FROM pedidos WHERE id = ?
+        """, (pedido_id,))
+
+        row = cursor.fetchone()
+
+        if row is None:
+            raise ValueError("Pedido no encontrado")
+
+        if row["estado"] == ENTREGADO:
+            raise ValueError(
+                "Este pedido ya fue ENTREGADO y no se puede editar "
+                "(el stock ya se descontó con estos datos)."
+            )
+
+        # ============================================
+        # DATOS GENERALES
+        # ============================================
         cursor.execute("""
             UPDATE pedidos
             SET
@@ -634,7 +657,6 @@ def actualizar_pedido(pedido_id, datos):
             pedido_id
 
         ))
-
 
         cursor.execute("""
             UPDATE clientes
@@ -651,6 +673,105 @@ def actualizar_pedido(pedido_id, datos):
             pedido_id
         ))
 
+        # ============================================
+        # PRODUCTOS DEL PEDIDO
+        # ============================================
+        for item in items:
+
+            # Fila marcada para eliminar, o cantidad en 0
+            if item["eliminar"] or item["cantidad"] <= 0:
+
+                if item["id"]:
+                    cursor.execute("""
+                        DELETE FROM detalle_pedido WHERE id = ?
+                    """, (item["id"],))
+
+                continue
+
+            cursor.execute("""
+                SELECT producto, marca, presentacion, precio
+                FROM productos
+                WHERE codigo = ?
+            """, (item["codigo"],))
+
+            prod = cursor.fetchone()
+
+            if prod is None:
+                # Código inválido/inexistente: se ignora la fila
+                continue
+
+            subtotal = prod["precio"] * item["cantidad"]
+
+            if item["id"]:
+
+                cursor.execute("""
+                    UPDATE detalle_pedido
+                    SET
+                        producto_codigo = ?,
+                        producto = ?,
+                        marca = ?,
+                        presentacion = ?,
+                        cantidad = ?,
+                        precio_unitario = ?,
+                        subtotal = ?
+                    WHERE id = ?
+                """, (
+                    item["codigo"],
+                    prod["producto"],
+                    prod["marca"],
+                    prod["presentacion"],
+                    item["cantidad"],
+                    prod["precio"],
+                    subtotal,
+                    item["id"]
+                ))
+
+            else:
+
+                cursor.execute("""
+                    INSERT INTO detalle_pedido
+                    (
+                        pedido_id, producto_codigo, producto, marca,
+                        presentacion, cantidad, precio_unitario, subtotal
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    pedido_id,
+                    item["codigo"],
+                    prod["producto"],
+                    prod["marca"],
+                    prod["presentacion"],
+                    item["cantidad"],
+                    prod["precio"],
+                    subtotal
+                ))
+
+        # ============================================
+        # RECALCULAR SUBTOTAL Y TOTAL DEL PEDIDO
+        # ============================================
+        cursor.execute("""
+            SELECT COALESCE(SUM(subtotal), 0) AS s
+            FROM detalle_pedido
+            WHERE pedido_id = ?
+        """, (pedido_id,))
+
+        subtotal_pedido = cursor.fetchone()["s"]
+
+        cursor.execute("""
+            SELECT delivery, descuento FROM pedidos WHERE id = ?
+        """, (pedido_id,))
+
+        row2 = cursor.fetchone()
+        delivery = row2["delivery"] or 0
+        descuento = row2["descuento"] or 0
+
+        total_pedido = subtotal_pedido + delivery - descuento
+
+        cursor.execute("""
+            UPDATE pedidos
+            SET subtotal = ?, total = ?
+            WHERE id = ?
+        """, (subtotal_pedido, total_pedido, pedido_id))
 
         conn.commit()
 

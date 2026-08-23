@@ -29,8 +29,16 @@ Modificar datos del pedido
 </div>
 
 
+{% if error %}
+<div class="panel" style="background:#fdecea; margin-bottom:16px;">
+    <strong>{{ error }}</strong>
+</div>
+{% endif %}
 
-<form method="POST">
+
+{% if pedido.estado != "ENTREGADO" %}
+
+<form method="POST" id="form-editar-pedido">
 
 
 <div class="erp-grid">
@@ -61,10 +69,14 @@ Teléfono:
 
 </p>
 
+<p style="font-size:0.85em; color:#777;">
+Para cambiar nombre, teléfono o referencia del cliente, usa
+<a href="/admin/clientes/editar/{{ pedido.cliente_id }}">editar cliente</a>.
+</p>
 
 
 <label>
-Dirección
+Dirección de pedido
 </label>
 
 
@@ -96,7 +108,7 @@ class="input">
 
 
 <option
-{% if pedido.cliente.tipo_pago=="Efectivo" %}
+{% if pedido.tipo_pago=="Efectivo" %}
 selected
 {% endif %}
 >
@@ -105,7 +117,7 @@ Efectivo
 
 
 <option
-{% if pedido.cliente.tipo_pago=="Yape" %}
+{% if pedido.tipo_pago=="Yape" %}
 selected
 {% endif %}
 >
@@ -114,7 +126,7 @@ Yape
 
 
 <option
-{% if pedido.cliente.tipo_pago=="Visa" %}
+{% if pedido.tipo_pago=="Visa" %}
 selected
 {% endif %}
 >
@@ -151,56 +163,70 @@ name="observaciones">{{pedido.observaciones}}</textarea>
 Productos
 </h3>
 
-
-<table class="erp-table">
+<table class="erp-table" id="tabla-productos">
 
 
 <thead>
 
 <tr>
 
-<th>
-Producto
-</th>
-
-<th>
-Cantidad
-</th>
-
-<th>
-Precio
-</th>
+<th>Código</th>
+<th>Producto</th>
+<th style="width:100px;">Cantidad</th>
+<th style="width:110px;">Precio</th>
+<th style="width:120px;">Subtotal</th>
+<th style="width:60px;"></th>
 
 </tr>
 
 </thead>
 
 
-<tbody>
+<tbody id="filas-productos">
 
 
 {% for item in pedido.detalle %}
 
-
 <tr>
 
 <td>
-{{item.producto}}
+    <input type="hidden" name="item_id" value="{{ item.id }}">
+    <input type="hidden" name="item_eliminar" value="0">
+
+    <select name="item_codigo" class="input select-codigo" onchange="actualizarFila(this)">
+        {% for p in pedido.productos_catalogo %}
+        <option value="{{ p.codigo }}"
+            data-nombre="{{ p.producto }}"
+            data-precio="{{ p.precio }}"
+            {% if p.codigo == item.codigo %}selected{% endif %}>
+            {{ p.codigo }}
+        </option>
+        {% endfor %}
+    </select>
 </td>
 
+<td class="nombre-producto">{{ item.producto }}</td>
 
 <td>
-{{item.cantidad}}
+    <input type="number" name="item_cantidad" class="input input-cantidad"
+        value="{{ item.cantidad }}" min="1" onchange="actualizarFila(this)">
 </td>
 
+<td class="precio-producto" data-precio="{{ item.precio_unitario }}">
+    S/ {{ "%.2f"|format(item.precio_unitario) }}
+</td>
+
+<td class="subtotal-producto">
+    S/ {{ "%.2f"|format(item.subtotal) }}
+</td>
 
 <td>
-S/ {{item.precio_unitario}}
+    <button type="button" class="btn-danger" onclick="eliminarFila(this)">
+        🗑
+    </button>
 </td>
-
 
 </tr>
-
 
 {% endfor %}
 
@@ -208,7 +234,23 @@ S/ {{item.precio_unitario}}
 </tbody>
 
 
+<tfoot>
+<tr>
+    <td colspan="4" style="text-align:right; font-weight:600; padding:12px;">
+        Total
+    </td>
+    <td colspan="2" id="total-pedido" style="font-weight:700; padding:12px;">
+        S/ {{ "%.2f"|format(pedido.total) }}
+    </td>
+</tr>
+</tfoot>
+
+
 </table>
+
+<button type="button" class="btn-secondary" style="margin-top:12px;" onclick="agregarFila()">
+    + Agregar producto
+</button>
 
 
 </div>
@@ -241,8 +283,108 @@ Guardar cambios
 
 </form>
 
+{% else %}
+
+<div class="erp-card full">
+    <p>Puedes ver el pedido en
+        <a href="/admin/pedido/{{ pedido.id }}">detalle del pedido</a>.
+    </p>
+</div>
+
+{% endif %}
+
 
 </div>
+
+
+<!-- Plantilla oculta de catálogo para filas nuevas -->
+<template id="template-opciones-catalogo">
+    {% for p in pedido.productos_catalogo %}
+    <option value="{{ p.codigo }}" data-nombre="{{ p.producto }}" data-precio="{{ p.precio }}">
+        {{ p.codigo }}
+    </option>
+    {% endfor %}
+</template>
+
+<script>
+
+function actualizarFila(el){
+
+    let fila = el.closest("tr");
+    let select = fila.querySelector(".select-codigo");
+    let opcion = select.options[select.selectedIndex];
+
+    fila.querySelector(".nombre-producto").innerText = opcion.dataset.nombre;
+
+    let precio = parseFloat(opcion.dataset.precio);
+    let celdaPrecio = fila.querySelector(".precio-producto");
+    celdaPrecio.dataset.precio = precio;
+    celdaPrecio.innerText = "S/ " + precio.toFixed(2);
+
+    let cantidad = parseInt(fila.querySelector(".input-cantidad").value) || 0;
+    let subtotal = precio * cantidad;
+    fila.querySelector(".subtotal-producto").innerText = "S/ " + subtotal.toFixed(2);
+
+    recalcularTotal();
+}
+
+function eliminarFila(boton){
+
+    let fila = boton.closest("tr");
+    fila.querySelector("input[name=item_eliminar]").value = "1";
+    fila.style.display = "none";
+    recalcularTotal();
+}
+
+function agregarFila(){
+
+    let tbody = document.getElementById("filas-productos");
+    let plantilla = document.getElementById("template-opciones-catalogo").innerHTML;
+
+    let fila = document.createElement("tr");
+
+    fila.innerHTML = `
+        <td>
+            <input type="hidden" name="item_id" value="">
+            <input type="hidden" name="item_eliminar" value="0">
+            <select name="item_codigo" class="input select-codigo" onchange="actualizarFila(this)">
+                ${plantilla}
+            </select>
+        </td>
+        <td class="nombre-producto"></td>
+        <td>
+            <input type="number" name="item_cantidad" class="input input-cantidad" value="1" min="1" onchange="actualizarFila(this)">
+        </td>
+        <td class="precio-producto" data-precio="0">S/ 0.00</td>
+        <td class="subtotal-producto">S/ 0.00</td>
+        <td>
+            <button type="button" class="btn-danger" onclick="eliminarFila(this)">🗑</button>
+        </td>
+    `;
+
+    tbody.appendChild(fila);
+    actualizarFila(fila.querySelector(".select-codigo"));
+}
+
+function recalcularTotal(){
+
+    let total = 0;
+
+    document.querySelectorAll("#filas-productos tr").forEach(function(fila){
+
+        if (fila.style.display === "none") return;
+
+        let precio = parseFloat(fila.querySelector(".precio-producto").dataset.precio) || 0;
+        let cantidad = parseInt(fila.querySelector(".input-cantidad").value) || 0;
+
+        total += precio * cantidad;
+
+    });
+
+    document.getElementById("total-pedido").innerText = "S/ " + total.toFixed(2);
+}
+
+</script>
 
 
 {% endblock %}
