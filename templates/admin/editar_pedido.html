@@ -36,7 +36,15 @@ Modificar datos del pedido
 {% endif %}
 
 
-{% if pedido.estado != "ENTREGADO" %}
+{% if pedido.estado != "CANCELADO" %}
+
+{% if pedido.estado == "ENTREGADO" %}
+<div class="panel" style="background:#fff8e1; margin-bottom:16px;">
+    <strong>Este pedido ya fue ENTREGADO.</strong>
+    El sistema ajustará el stock
+    automáticamente con los nuevos datos.
+</div>
+{% endif %}
 
 <form method="POST" id="form-editar-pedido">
 
@@ -50,43 +58,72 @@ Modificar datos del pedido
 <h3>Cliente</h3>
 
 
-<p>
-<strong>
-Nombre:
-</strong>
-
-{{ pedido.cliente.nombre }}
-
-</p>
-
-
-<p>
-<strong>
-Teléfono:
-</strong>
-
-{{ pedido.cliente.telefono }}
-
-</p>
-
-<p style="font-size:0.85em; color:#777;">
-Para cambiar nombre, teléfono o referencia del cliente, usa
-<a href="/admin/clientes/editar/{{ pedido.cliente_id }}">editar cliente</a>.
-</p>
-
-
 <label>
-Dirección de pedido
+Cliente asignado a este pedido:   
 </label>
 
+<select name="cliente_id" id="select-cliente" class="input" onchange="cambiarCliente(this)">
 
-<input
+    {% for c in clientes %}
+    <option value="{{ c.id }}"
+        data-direccion="{{ c.direccion }}"
+        {% if c.id == pedido.cliente_id %}selected{% endif %}>
+        {{ c.nombre }} — {{ c.telefono }}
+    </option>
+    {% endfor %}
+
+    <option value="__nuevo__"> + Nuevo Cliente</option>
+
+</select>
+
+
+<div id="campos-nuevo-cliente" style="display:none; margin-top:14px;">
+
+    <label>Nombre del nuevo cliente</label>
+    <input class="input" name="nuevo_nombre" placeholder="Nombre completo">
+
+    <label style="margin-top:10px;">Teléfono</label>
+    <input class="input" name="nuevo_telefono" placeholder="Teléfono (opcional)">
+
+    <label style="margin-top:10px;">Referencia</label>
+    <input class="input" name="nuevo_referencia" placeholder="Referencia (opcional)">
+
+</div>
+
+
+<div style="width:50%; margin-top:20px; display:block;">
+    <label>
+    Dirección (de este pedido)
+    </label>
+</div>
+
+
+
+<input style="width:440px;"
 class="input"
+id="input-direccion"
 name="direccion"
 value="{{ pedido.cliente.direccion }}">
 
 
 </div>
+
+
+<script>
+function cambiarCliente(select) {
+
+    var esNuevo = select.value === "__nuevo__";
+
+    document.getElementById("campos-nuevo-cliente").style.display = esNuevo ? "block" : "none";
+
+    if (!esNuevo) {
+        var opcion = select.options[select.selectedIndex];
+        document.getElementById("input-direccion").value = opcion.dataset.direccion || "";
+    } else {
+        document.getElementById("input-direccion").value = "";
+    }
+}
+</script>
 
 
 

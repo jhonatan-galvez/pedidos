@@ -28,6 +28,7 @@ import logging
 from services.whatsapp_service import enviar_confirmacion_pedido
 from services.producto_service import actualizar_producto, obtener_admproductos
 from services.cliente_service import obtener_clientes, actualizar_cliente_admin, obtener_cliente_por_id
+import services.caja_service as caja_service
 from services.pedido_service import (
     crear_pedido,
     obtener_pedidos,
@@ -219,6 +220,20 @@ def cambiar_estado(pedido_id):
     actualizar_estado_pedido(pedido_id, estado)
 
     return redirect("/admin/pedidos")
+
+@app.route("/admin/pedido/<int:pedido_id>/pagado", methods=["POST"])
+def marcar_pagado(pedido_id):
+
+    pagado = request.form.get("pagado") == "1"
+
+    try:
+        caja_service.marcar_pagado(pedido_id, pagado)
+    except ValueError:
+        pass  # ej: intento de marcar pagado un CANCELADO; se ignora
+
+    volver = request.form.get("volver") or "/admin/pedidos"
+
+    return redirect(volver)
 
 @app.route("/admin/dashboard")
 def dashboard():
@@ -601,6 +616,8 @@ def editar_pedido(id):
     if pedido is None:
         return "Pedido no encontrado", 404
 
+    clientes = obtener_clientes()
+
 
     if request.method == "POST":
 
@@ -611,6 +628,35 @@ def editar_pedido(id):
             "observaciones": request.form["observaciones"]
 
         }
+
+        cliente_sel = request.form.get("cliente_id")
+
+        if cliente_sel == "__nuevo__":
+
+            nombre_nuevo = request.form.get("nuevo_nombre", "").strip()
+
+            if not nombre_nuevo:
+
+                pedido = obtener_pedido_completo(id)
+                clientes = obtener_clientes()
+
+                return render_template(
+                    "admin/editar_pedido.html",
+                    pedido=pedido,
+                    clientes=clientes,
+                    error="Debes ingresar al menos el nombre del nuevo cliente."
+                )
+
+            datos["cliente_nuevo"] = {
+                "nombre": nombre_nuevo,
+                "telefono": request.form.get("nuevo_telefono", "").strip(),
+                "direccion": datos["direccion"],
+                "referencia": request.form.get("nuevo_referencia", "").strip()
+            }
+
+        elif cliente_sel:
+
+            datos["cliente_id"] = cliente_sel
 
         ids = request.form.getlist("item_id")
         codigos = request.form.getlist("item_codigo")
@@ -639,6 +685,7 @@ def editar_pedido(id):
             return render_template(
                 "admin/editar_pedido.html",
                 pedido=pedido,
+                clientes=clientes,
                 error=str(e)
             )
 
@@ -647,17 +694,10 @@ def editar_pedido(id):
         )
 
 
-    if pedido["estado"] == "ENTREGADO":
-
-        return render_template(
-            "admin/editar_pedido.html",
-            pedido=pedido,
-            error="Este pedido ya fue ENTREGADO y no se puede editar."
-        )
-
     return render_template(
         "admin/editar_pedido.html",
         pedido=pedido,
+        clientes=clientes,
         error=None
     )
 
@@ -1096,6 +1136,103 @@ def descargar_reporte_movimientos():
 #ticket = generar_ticket(4)
 #print(ticket.productos)
 #print(ticket.generar_ticket_pos())
+
+# ======================================================
+# CAJA / RECAUDACIÓN
+# ======================================================
+
+@app.route("/admin/caja", methods=["GET", "POST"])
+def caja():
+
+    if request.method == "POST":
+
+        try:
+
+            caja_service.registrar_movimiento_manual(
+                fecha=request.form["fecha"],
+                tipo_pago=request.form["tipo_pago"],
+                tipo_movimiento=request.form["tipo_movimiento"],
+                monto=float(request.form["monto"]),
+                observacion=request.form.get("observacion", "")
+            )
+
+        except ValueError:
+            pass
+
+        return redirect(url_for("caja"))
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo_pago = request.args.get("tipo_pago")
+
+    movimientos = caja_service.obtener_movimientos_caja(
+        desde=desde, hasta=hasta, tipo_pago=tipo_pago
+    )
+
+    saldos = caja_service.obtener_saldos_caja()
+
+    return render_template(
+        "admin/caja.html",
+        movimientos=movimientos,
+        saldos=saldos,
+        desde=desde,
+        hasta=hasta,
+        tipo_pago=tipo_pago,
+        tipos_pago=caja_service.TIPOS_PAGO
+    )
+
+
+@app.route("/admin/caja/eliminar/<int:id>", methods=["POST"])
+def eliminar_movimiento_caja(id):
+
+    caja_service.eliminar_movimiento_manual(id)
+
+    return redirect(url_for("caja"))
+
+
+@app.route("/admin/caja/excel")
+def descargar_reporte_caja():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo_pago = request.args.get("tipo_pago")
+
+    movimientos = caja_service.obtener_movimientos_caja(
+        desde=desde, hasta=hasta, tipo_pago=tipo_pago
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for m in movimientos:
+
+        datos.append({
+            "Fecha": m["fecha"],
+            "Tipo de pago": m["tipo_pago"],
+            "Movimiento": m["tipo_movimiento"],
+            "Monto": m["monto"],
+            "Pedido": m["pedido_numero"] or "",
+            "Observación": m["observacion"] or ""
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(archivo, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Caja")
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_caja.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

@@ -7,7 +7,8 @@ from services.cliente_service import (
     actualizar_cliente
 )
 from services.producto_service import obtener_productos
-from services.stock_service import descontar_stock_pedido
+from services.stock_service import descontar_stock_pedido, revertir_stock_pedido
+import services.caja_service as caja_service
 
 # ======================================================
 # GENERAR NÚMERO DE PEDIDO
@@ -216,6 +217,8 @@ def obtener_pedidos(
             p.delivery,
             p.descuento,
             p.total,
+            p.tipo_pago,
+            p.pagado,
 
             c.nombre,
             c.telefono
@@ -311,6 +314,8 @@ def obtener_pedidos(
             "delivery": row["delivery"],
             "descuento": row["descuento"],
             "total": row["total"],
+            "tipo_pago": row["tipo_pago"],
+            "pagado": bool(row["pagado"]),
 
             "cliente": row["nombre"],
             "telefono": row["telefono"]
@@ -391,6 +396,7 @@ def obtener_pedido_completo(pedido_id):
             p.total,
             p.tipo_pago,
             p.observaciones,
+            p.pagado,
             c.nombre,
             c.telefono,
             c.direccion,
@@ -425,6 +431,7 @@ def obtener_pedido_completo(pedido_id):
         "observaciones": row["observaciones"],
 
         "tipo_pago": row["tipo_pago"],
+        "pagado": bool(row["pagado"]),
 
         "cliente": {
             "nombre": row["nombre"],
@@ -491,6 +498,35 @@ def actualizar_estado_pedido(pedido_id, estado):
         if estado == ENTREGADO and estado_anterior != ENTREGADO:
 
             descontar_stock_pedido(cursor, pedido_id)
+
+        # ============================================
+        # CANCELAR PEDIDO
+        # No debe dejar rastro en stock ni en caja:
+        # - si ya estaba ENTREGADO, se revierte el stock
+        # - si ya estaba pagado, se anula el ingreso de caja
+        # ============================================
+        elif estado == CANCELADO and estado_anterior != CANCELADO:
+
+            if estado_anterior == ENTREGADO:
+
+                revertir_stock_pedido(
+                    cursor, pedido_id,
+                    observacion="Reversión por cancelación de pedido"
+                )
+
+            cursor.execute("""
+                SELECT pagado FROM pedidos WHERE id = ?
+            """, (pedido_id,))
+
+            row_pago = cursor.fetchone()
+
+            if row_pago and row_pago["pagado"]:
+
+                caja_service.anular_ingreso_pedido(cursor, pedido_id)
+
+                cursor.execute("""
+                    UPDATE pedidos SET pagado = 0, fecha_pago = NULL WHERE id = ?
+                """, (pedido_id,))
 
         conn.commit()
 
@@ -621,12 +657,8 @@ def actualizar_pedido(pedido_id, datos, items):
 
     try:
 
-        # ============================================
-        # BLOQUEO: no se edita un pedido ya ENTREGADO
-        # (el stock ya se descontó con esos datos)
-        # ============================================
         cursor.execute("""
-            SELECT estado FROM pedidos WHERE id = ?
+            SELECT estado, pagado, cliente_id FROM pedidos WHERE id = ?
         """, (pedido_id,))
 
         row = cursor.fetchone()
@@ -634,11 +666,81 @@ def actualizar_pedido(pedido_id, datos, items):
         if row is None:
             raise ValueError("Pedido no encontrado")
 
-        if row["estado"] == ENTREGADO:
+        # Un pedido CANCELADO no tiene sentido editarlo (para
+        # corregirlo hay que reactivarlo primero cambiando el estado)
+        if row["estado"] == "CANCELADO":
             raise ValueError(
-                "Este pedido ya fue ENTREGADO y no se puede editar "
-                "(el stock ya se descontó con estos datos)."
+                "Este pedido está CANCELADO. Cambia el estado antes de editarlo."
             )
+
+        estaba_entregado = row["estado"] == ENTREGADO
+        estaba_pagado = bool(row["pagado"])
+        cliente_id_anterior = row["cliente_id"]
+
+        # ============================================
+        # Si ya estaba ENTREGADO, revertimos el
+        # descuento de stock ANTES de tocar el detalle.
+        # Al final se vuelve a descontar con los datos
+        # ya corregidos (dueño puede editar libremente,
+        # el sistema mantiene el stock consistente solo).
+        # ============================================
+        if estaba_entregado:
+
+            revertir_stock_pedido(
+                cursor, pedido_id,
+                observacion="Reversión por edición de pedido ya entregado"
+            )
+
+        # ============================================
+        # CLIENTE: existente distinto, o uno nuevo
+        # ============================================
+        cliente_id = cliente_id_anterior
+
+        if datos.get("cliente_nuevo"):
+
+            telefono_nuevo = datos["cliente_nuevo"]["telefono"].strip() or None
+
+            existente = None
+
+            # Solo buscamos coincidencia si hay un teléfono real.
+            # Un teléfono vacío/None nunca debe "fusionar" con otro
+            # cliente que también lo tenga vacío.
+            if telefono_nuevo:
+                existente = buscar_cliente_por_telefono(cursor, telefono_nuevo)
+
+            if existente:
+
+                cliente_id = existente["id"]
+
+                cursor.execute("""
+                    UPDATE pedidos SET cliente_id = ? WHERE id = ?
+                """, (cliente_id, pedido_id))
+
+            else:
+
+                cursor.execute("""
+                    INSERT INTO clientes (nombre, telefono, direccion, referencia)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    datos["cliente_nuevo"]["nombre"],
+                    telefono_nuevo,
+                    datos["cliente_nuevo"]["direccion"],
+                    datos["cliente_nuevo"]["referencia"]
+                ))
+
+                cliente_id = cursor.lastrowid
+
+                cursor.execute("""
+                    UPDATE pedidos SET cliente_id = ? WHERE id = ?
+                """, (cliente_id, pedido_id))
+
+        elif datos.get("cliente_id") and int(datos["cliente_id"]) != cliente_id_anterior:
+
+            cliente_id = int(datos["cliente_id"])
+
+            cursor.execute("""
+                UPDATE pedidos SET cliente_id = ? WHERE id = ?
+            """, (cliente_id, pedido_id))
 
         # ============================================
         # DATOS GENERALES
@@ -658,19 +760,17 @@ def actualizar_pedido(pedido_id, datos, items):
 
         ))
 
+        # La dirección se guarda sobre el cliente que haya
+        # quedado asignado al pedido (el nuevo, el reasignado,
+        # o el mismo de siempre)
         cursor.execute("""
             UPDATE clientes
-            SET
-                direccion = ?
-            WHERE id = (
-                SELECT cliente_id
-                FROM pedidos
-                WHERE id = ?
-            )
+            SET direccion = ?
+            WHERE id = ?
         """,
         (
             datos["direccion"],
-            pedido_id
+            cliente_id
         ))
 
         # ============================================
@@ -772,6 +872,24 @@ def actualizar_pedido(pedido_id, datos, items):
             SET subtotal = ?, total = ?
             WHERE id = ?
         """, (subtotal_pedido, total_pedido, pedido_id))
+
+        # ============================================
+        # Si ya estaba ENTREGADO, volvemos a descontar
+        # stock, esta vez con el detalle ya corregido
+        # ============================================
+        if estaba_entregado:
+
+            descontar_stock_pedido(cursor, pedido_id)
+
+        # ============================================
+        # Si ya estaba PAGADO, el ingreso de caja se
+        # actualiza al nuevo total / tipo de pago
+        # ============================================
+        if estaba_pagado:
+
+            caja_service.registrar_ingreso_pedido(
+                cursor, pedido_id, datos["tipo_pago"], total_pedido
+            )
 
         conn.commit()
 
@@ -999,6 +1117,3 @@ def obtener_ventas_por_producto(desde=None, hasta=None):
         })
 
     return ventas
-
-
-

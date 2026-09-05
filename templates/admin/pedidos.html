@@ -183,6 +183,17 @@ delivered
 
         <div>
 
+            <strong>Pago</strong>
+
+            <p>
+                {% if pedido.tipo_pago == "Yape" %} {% elif pedido.tipo_pago == "Efectivo" %} {% else %} {% endif %}
+                {{ pedido.tipo_pago }}
+            </p>
+
+        </div>
+
+        <div>
+
             <strong>Total</strong>
 
             <p class="order-total">
@@ -204,6 +215,18 @@ delivered
         <span class="badge-active">
             {{ pedido.estado }}
         </span>
+
+        {% if pedido.estado != "CANCELADO" %}
+        <form method="POST" action="/admin/pedido/{{ pedido.id }}/pagado" style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="hidden" name="volver" value="/admin/pedidos">
+            <input type="hidden" name="pagado" value="{{ '0' if pedido.pagado else '1' }}">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+                <input type="checkbox" {% if pedido.pagado %}checked{% endif %}
+                    onchange="this.form.submit()">
+                Cancelado (pagado)
+            </label>
+        </form>
+        {% endif %}
 
         <a
             href="/admin/pedido/{{ pedido.id }}"

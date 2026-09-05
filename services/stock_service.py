@@ -86,6 +86,59 @@ def descontar_stock_pedido(cursor, pedido_id):
             f"Descuento por entrega de pedido"
         ))
 
+
+# ======================================================
+# REVERTIR EL DESCUENTO DE STOCK DE UN PEDIDO
+# ======================================================
+# Se usa cuando un pedido ENTREGADO se cancela, o cuando
+# se edita un pedido ya entregado (se revierte todo y
+# luego se vuelve a descontar con los datos corregidos).
+# ======================================================
+def revertir_stock_pedido(cursor, pedido_id, observacion="Reversión de descuento de stock"):
+
+    fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    cursor.execute("""
+        SELECT producto_codigo, cantidad
+        FROM detalle_pedido
+        WHERE pedido_id = ?
+    """, (pedido_id,))
+
+    items = cursor.fetchall()
+
+    for item in items:
+
+        codigo = item["producto_codigo"]
+        cantidad = item["cantidad"]
+
+        cursor.execute("""
+            SELECT stock FROM productos WHERE codigo = ?
+        """, (codigo,))
+
+        row = cursor.fetchone()
+
+        if row is None:
+            continue
+
+        stock_anterior = row["stock"]
+        stock_nuevo = stock_anterior + cantidad
+
+        cursor.execute("""
+            UPDATE productos SET stock = ? WHERE codigo = ?
+        """, (stock_nuevo, codigo))
+
+        cursor.execute("""
+            INSERT INTO movimientos_stock
+            (
+                producto_codigo, fecha, tipo, cantidad,
+                stock_anterior, stock_nuevo, pedido_id, observacion
+            )
+            VALUES (?, ?, 'AJUSTE', ?, ?, ?, ?, ?)
+        """, (
+            codigo, fecha, cantidad, stock_anterior,
+            stock_nuevo, pedido_id, observacion
+        ))
+
 # ======================================================
 # AJUSTE MANUAL DE STOCK
 # ======================================================

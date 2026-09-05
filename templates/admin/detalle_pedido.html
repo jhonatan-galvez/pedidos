@@ -105,7 +105,7 @@
 
         </a>
 
-        {% if pedido.estado != "ENTREGADO" %}
+        {% if pedido.estado != "CANCELADO" %}
         <a href="/admin/pedido/{{ pedido.id }}/editar"
         class="btn-secondary">
 
@@ -137,14 +137,19 @@
                     Listo
                 </option>
 
-                <option value="EN_CAMINO"
-                {% if pedido.estado=="EN_CAMINO" %}selected{% endif %}>
+                <option value="EN CAMINO"
+                {% if pedido.estado=="EN CAMINO" %}selected{% endif %}>
                     En camino
                 </option>
 
                 <option value="ENTREGADO"
                 {% if pedido.estado=="ENTREGADO" %}selected{% endif %}>
                     Entregado
+                </option>
+
+                <option value="CANCELADO"
+                {% if pedido.estado=="CANCELADO" %}selected{% endif %}>
+                    Cancelado
                 </option>
 
             </select>
@@ -156,6 +161,13 @@
         </form>
 
     </div>
+
+    {% if pedido.estado == "CANCELADO" %}
+    <p style="color:#c0392b; margin-top:10px;">
+        Este pedido está CANCELADO: no descontó stock (o se revirtió si ya
+        estaba ENTREGADO) y no suma a la caja de recaudación.
+    </p>
+    {% endif %}
 
 </div>
 
