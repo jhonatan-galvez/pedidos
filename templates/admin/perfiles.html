@@ -1,0 +1,131 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Perfiles{% endblock %}
+{% block page_title %}Perfiles de Usuario{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="panel" style="background:#fdecea;"><strong>{{ error }}</strong></div>
+{% endif %}
+
+<!-- =====================================================
+     CREAR PERFIL
+===================================================== -->
+
+<div class="panel">
+
+    <h3>Crear nuevo perfil</h3>
+
+    <form method="POST" style="margin-top:12px;">
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+
+            <div>
+                <label>Nombre del perfil</label>
+                <input type="text" name="nombre" class="input" placeholder="Ej: Repartidor" required>
+            </div>
+
+            <div>
+                <label style="display:flex; align-items:center; gap:6px; margin-bottom:0;">
+                    <input type="checkbox" name="puede_crear" value="1"> Puede crear
+                </label>
+            </div>
+
+            <div>
+                <label style="display:flex; align-items:center; gap:6px; margin-bottom:0;">
+                    <input type="checkbox" name="puede_editar" value="1"> Puede editar pedidos
+                </label>
+            </div>
+
+            <button type="submit" class="btn-primary">Crear perfil</button>
+
+        </div>
+
+    </form>
+
+    <p style="font-size:0.85em; color:#777; margin-top:10px;">
+        El permiso para <strong>eliminar</strong> y para gestionar usuarios/perfiles
+        es exclusivo del perfil <strong>Administrador</strong> y no se puede
+        asignar a otros perfiles.
+    </p>
+
+</div>
+
+<!-- =====================================================
+     LISTADO / EDICIÓN
+===================================================== -->
+
+<div class="panel">
+
+    <h3>Perfiles existentes</h3>
+
+    <div style="overflow-x:auto;">
+
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:12px;">Nombre</th>
+                    <th style="text-align:center; padding:12px;">Crear</th>
+                    <th style="text-align:center; padding:12px;">Editar pedidos</th>
+                    <th style="text-align:center; padding:12px;">Admin</th>
+                    <th style="text-align:center; padding:12px;">Usuarios</th>
+                    <th style="width:180px;"></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for p in perfiles %}
+                <tr>
+
+                    {% if p.sistema %}
+
+                    <td style="padding:12px;"><strong>{{ p.nombre }}</strong> <small style="color:#777;">(del sistema)</small></td>
+                    <td style="padding:12px; text-align:center;">{{ "✅" if p.puede_crear else "—" }}</td>
+                    <td style="padding:12px; text-align:center;">{{ "✅" if p.puede_editar else "—" }}</td>
+                    <td style="padding:12px; text-align:center;">{{ "✅" if p.es_admin else "—" }}</td>
+                    <td style="padding:12px; text-align:center;">{{ p.usuarios }}</td>
+                    <td></td>
+
+                    {% else %}
+
+                    <td style="padding:12px;">
+                        <input type="text" name="nombre" form="perfil-form-{{ p.id }}" class="input" value="{{ p.nombre }}" style="width:160px;">
+                    </td>
+                    <td style="padding:12px; text-align:center;">
+                        <input type="checkbox" name="puede_crear" form="perfil-form-{{ p.id }}" value="1" {% if p.puede_crear %}checked{% endif %}>
+                    </td>
+                    <td style="padding:12px; text-align:center;">
+                        <input type="checkbox" name="puede_editar" form="perfil-form-{{ p.id }}" value="1" {% if p.puede_editar %}checked{% endif %}>
+                    </td>
+                    <td style="padding:12px; text-align:center;">—</td>
+                    <td style="padding:12px; text-align:center;">{{ p.usuarios }}</td>
+                    <td style="padding:12px; display:flex; gap:6px;">
+
+                        <form id="perfil-form-{{ p.id }}" method="POST" action="/admin/perfiles/{{ p.id }}/editar" style="display:contents;">
+                            <button type="submit" class="btn-secondary">Guardar</button>
+                        </form>
+
+                        {% if p.usuarios == 0 %}
+                        <form method="POST" action="/admin/perfiles/{{ p.id }}/eliminar" style="display:contents;"
+                            onsubmit="return confirm('¿Eliminar el perfil {{ p.nombre }}?');">
+                            <button type="submit" class="btn-danger">🗑</button>
+                        </form>
+                        {% endif %}
+
+                    </td>
+
+                    {% endif %}
+
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

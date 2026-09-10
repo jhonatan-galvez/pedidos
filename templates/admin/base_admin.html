@@ -63,7 +63,7 @@
             <a href="/admin/reporte-ventas"
                 class="{% if request.path == '/admin/reporte-ventas' %}active{% endif %}">
                 <i class="fa-solid fa-file-excel"></i>
-                Reporte Ventas
+                Reportes
             </a>
 
             <a href="/admin/reporte-productos"
@@ -108,11 +108,27 @@
                 Sincronización
             </a>
 
+            {% if usuario_actual and usuario_actual.es_admin %}
+
+            <a href="/admin/usuarios"
+               class="{% if request.path == '/admin/usuarios' %}active{% endif %}">
+                <i class="fa-solid fa-user-gear"></i>
+                Usuarios
+            </a>
+
+            <a href="/admin/perfiles"
+               class="{% if request.path == '/admin/perfiles' %}active{% endif %}">
+                <i class="fa-solid fa-shield-halved"></i>
+                Perfiles
+            </a>
+
+            {% endif %}
+
         </nav>
 
         <div class="sidebar-footer">
 
-            <small>Versión 2.60</small>
+            <small>Versión 2.50</small>
 
         </div>
 
@@ -132,11 +148,18 @@
 
             </div>
 
-            <div class="topbar-right">
+            <div class="topbar-right" style="display:flex; align-items:center; gap:14px;">
 
-                <i class="fa-regular fa-user"></i>
-
-                Administrador
+                {% if usuario_actual %}
+                <a href="/admin/mi-cuenta" style="color:inherit; text-decoration:none;">
+                    <i class="fa-regular fa-user"></i>
+                    {{ usuario_actual.nombre_completo }}
+                    <small style="opacity:0.7;">({{ usuario_actual.perfil_nombre }})</small>
+                </a>
+                <a href="/logout" style="color:inherit;">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </a>
+                {% endif %}
 
             </div>
 
@@ -146,6 +169,7 @@
         {% endblock %}
 
     </main>
+
 
 </div>
 

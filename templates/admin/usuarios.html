@@ -1,0 +1,126 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Usuarios{% endblock %}
+{% block page_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+
+{% if error %}
+<div class="panel" style="background:#fdecea;"><strong>{{ error }}</strong></div>
+{% endif %}
+
+<!-- =====================================================
+     CREAR USUARIO
+===================================================== -->
+
+<div class="panel">
+
+    <h3>Crear nuevo usuario</h3>
+
+    <form method="POST" style="margin-top:12px;">
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+
+            <div>
+                <label>Nombre completo</label>
+                <input type="text" name="nombre_completo" class="input" required>
+            </div>
+
+            <div>
+                <label>Usuario (para iniciar sesión)</label>
+                <input type="text" name="usuario" class="input" required>
+            </div>
+
+            <div>
+                <label>Contraseña</label>
+                <input type="password" name="password" class="input" required minlength="4">
+            </div>
+
+            <div>
+                <label>Perfil</label>
+                <select name="perfil_id" class="input" required>
+                    {% for p in perfiles %}
+                    <option value="{{ p.id }}">{{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+        </div>
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;">
+
+            <div>
+                <label>Pregunta de seguridad (para "olvidé mi contraseña")</label>
+                <input type="text" name="pregunta_seguridad" class="input"
+                    style="width:320px;" placeholder="Ej: ¿Nombre de tu primera mascota?">
+            </div>
+
+            <div>
+                <label>Respuesta</label>
+                <input type="text" name="respuesta_seguridad" class="input">
+            </div>
+
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top:14px;">
+            Crear usuario
+        </button>
+
+    </form>
+
+</div>
+
+<!-- =====================================================
+     LISTADO
+===================================================== -->
+
+<div class="panel">
+
+    <h3>Usuarios registrados</h3>
+
+    <div style="overflow-x:auto;">
+
+        <table style="width:100%; border-collapse:collapse; margin-top:10px;">
+
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding:12px;">Nombre</th>
+                    <th style="text-align:left; padding:12px;">Usuario</th>
+                    <th style="text-align:left; padding:12px;">Perfil</th>
+                    <th style="text-align:center; padding:12px;">Estado</th>
+                    <th style="text-align:left; padding:12px;">Último acceso</th>
+                    <th style="width:80px;"></th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for u in usuarios %}
+                <tr>
+                    <td style="padding:12px;">{{ u.nombre_completo }}</td>
+                    <td style="padding:12px;">{{ u.usuario }}</td>
+                    <td style="padding:12px;">
+                        {{ u.perfil_nombre }}
+                        {% if u.es_admin %}{% endif %}
+                    </td>
+                    <td style="padding:12px; text-align:center;">
+                        {% if u.activo %}
+                            <span style="color:#2e7d32;">Activo</span>
+                        {% else %}
+                            <span style="color:#c0392b;">Inactivo</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:12px; color:#777;">{{ u.ultimo_acceso or "Nunca" }}</td>
+                    <td style="padding:12px;">
+                        <a href="/admin/usuarios/{{ u.id }}/editar" class="btn-secondary">✏️</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}
