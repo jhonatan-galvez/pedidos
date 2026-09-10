@@ -14,7 +14,7 @@ from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
 from services.sync_log_service import (obtener_ultima_sincronizacion,
     obtener_historial)
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 import os
 import zipfile
 from flask import send_file
@@ -60,36 +60,8 @@ PRODUCT_IMAGE_FOLDER = os.path.join(
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "cambia-esta-clave-en-produccion")
 app.register_blueprint(ticket_bp)
 inicializar_database()
-
-from services.auth_service import (
-    usuario_actual, iniciar_sesion, cerrar_sesion,
-    login_required, admin_required, permiso_requerido
-)
-from services import usuario_service, perfil_service
-
-
-@app.before_request
-def proteger_admin():
-
-    ruta = request.path
-
-    rutas_publicas_admin = (
-        "/login", "/logout", "/login/recuperar", "/static"
-    )
-
-    if ruta.startswith("/admin") and not ruta.startswith(rutas_publicas_admin):
-
-        if "usuario_id" not in session:
-            return redirect(url_for("login", next=ruta))
-
-
-@app.context_processor
-def inyectar_usuario():
-    return {"usuario_actual": usuario_actual()}
-
 
 ####################################
 # SITIO PUBLICO - CLIENTE
@@ -241,7 +213,6 @@ def admin_detalle_pedido(pedido_id):
     )
 
 @app.route("/admin/pedido/<int:pedido_id>/estado", methods=["POST"])
-@permiso_requerido("puede_editar")
 def cambiar_estado(pedido_id):
 
     estado = request.form.get("estado")
@@ -251,7 +222,6 @@ def cambiar_estado(pedido_id):
     return redirect("/admin/pedidos")
 
 @app.route("/admin/pedido/<int:pedido_id>/pagado", methods=["POST"])
-@permiso_requerido("puede_editar")
 def marcar_pagado(pedido_id):
 
     pagado = request.form.get("pagado") == "1"
@@ -527,7 +497,6 @@ def editar_producto(id):
 # AJUSTE MANUAL DE STOCK (compras, mermas, regularización)
 # ======================================================
 @app.route("/admin/productos/<int:id>/ajustar-stock", methods=["GET", "POST"])
-@permiso_requerido("puede_editar")
 def ajustar_stock(id):
 
     productos = obtener_admproductos()
@@ -640,7 +609,6 @@ def pedidos_cliente(id):
     )
 
 @app.route("/admin/pedido/<int:id>/editar", methods=["GET","POST"])
-@permiso_requerido("puede_editar")
 def editar_pedido(id):
 
     pedido = obtener_pedido_completo(id)
@@ -1174,18 +1142,9 @@ def descargar_reporte_movimientos():
 # ======================================================
 
 @app.route("/admin/caja", methods=["GET", "POST"])
-@login_required
 def caja():
 
     if request.method == "POST":
-
-        user = usuario_actual()
-
-        if not (user["es_admin"] or user["puede_crear"]):
-            return render_template(
-                "admin/sin_permiso.html",
-                mensaje="Tu perfil no tiene permiso para registrar movimientos de caja."
-            ), 403
 
         try:
 
@@ -1224,7 +1183,6 @@ def caja():
 
 
 @app.route("/admin/caja/eliminar/<int:id>", methods=["POST"])
-@admin_required
 def eliminar_movimiento_caja(id):
 
     caja_service.eliminar_movimiento_manual(id)
@@ -1274,312 +1232,6 @@ def descargar_reporte_caja():
         download_name="reporte_caja.xlsx",
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-
-# ======================================================
-# AUTENTICACIÓN
-# ======================================================
-
-@app.route("/login", methods=["GET", "POST"])
-def login():
-
-    if request.method == "POST":
-
-        usuario = request.form.get("usuario", "").strip()
-        password = request.form.get("password", "")
-
-        user = usuario_service.verificar_login(usuario, password)
-
-        if user is None:
-            return render_template("admin/login.html", error="Usuario o contraseña incorrectos.")
-
-        iniciar_sesion(user)
-
-        siguiente = request.args.get("next") or "/admin"
-        return redirect(siguiente)
-
-    return render_template("admin/login.html", error=None)
-
-
-@app.route("/logout")
-def logout():
-
-    cerrar_sesion()
-    return redirect(url_for("login"))
-
-
-@app.route("/login/recuperar", methods=["GET", "POST"])
-def recuperar_password():
-
-    paso = "usuario"
-    usuario_ingresado = None
-    pregunta = None
-    error = None
-
-    if request.method == "POST":
-
-        usuario_ingresado = request.form.get("usuario", "").strip()
-        accion = request.form.get("accion")
-
-        if accion == "buscar":
-
-            pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
-
-            if pregunta is None:
-                error = "No se encontró ese usuario, o está inactivo."
-                paso = "usuario"
-            else:
-                paso = "respuesta"
-
-        elif accion == "resetear":
-
-            respuesta = request.form.get("respuesta", "")
-            nueva = request.form.get("password_nueva", "")
-            confirmar = request.form.get("password_confirmar", "")
-
-            if nueva != confirmar:
-                error = "Las contraseñas no coinciden."
-                paso = "respuesta"
-                pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
-
-            elif len(nueva) < 4:
-                error = "La contraseña debe tener al menos 4 caracteres."
-                paso = "respuesta"
-                pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
-
-            else:
-
-                try:
-                    usuario_service.resetear_password_con_respuesta(
-                        usuario_ingresado, respuesta, nueva
-                    )
-                    return render_template("admin/recuperar.html", paso="listo", error=None)
-
-                except ValueError as e:
-                    error = str(e)
-                    paso = "respuesta"
-                    pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
-
-    return render_template(
-        "admin/recuperar.html",
-        paso=paso,
-        usuario=usuario_ingresado,
-        pregunta=pregunta,
-        error=error
-    )
-
-
-# ======================================================
-# MI CUENTA (cualquier usuario logueado)
-# ======================================================
-
-@app.route("/admin/mi-cuenta", methods=["GET", "POST"])
-@login_required
-def mi_cuenta():
-
-    user = usuario_service.obtener_usuario_por_id(session["usuario_id"])
-    mensaje = None
-    error = None
-
-    if request.method == "POST":
-
-        accion = request.form.get("accion")
-
-        try:
-
-            if accion == "datos":
-
-                usuario_service.actualizar_mi_usuario(
-                    session["usuario_id"],
-                    request.form["nombre_completo"].strip(),
-                    request.form["usuario"].strip()
-                )
-
-                session["nombre_completo"] = request.form["nombre_completo"].strip()
-                session["usuario_login"] = request.form["usuario"].strip()
-
-                mensaje = "Datos actualizados."
-
-            elif accion == "password":
-
-                usuario_service.cambiar_mi_password(
-                    session["usuario_id"],
-                    request.form["password_actual"],
-                    request.form["password_nueva"]
-                )
-
-                mensaje = "Contraseña actualizada."
-
-            elif accion == "seguridad":
-
-                usuario_service.actualizar_pregunta_seguridad(
-                    session["usuario_id"],
-                    request.form["pregunta_seguridad"].strip(),
-                    request.form["respuesta_seguridad"].strip()
-                )
-
-                mensaje = "Pregunta de seguridad actualizada."
-
-        except ValueError as e:
-            error = str(e)
-
-        user = usuario_service.obtener_usuario_por_id(session["usuario_id"])
-
-    return render_template(
-        "admin/mi_cuenta.html",
-        user=user,
-        mensaje=mensaje,
-        error=error
-    )
-
-
-# ======================================================
-# GESTIÓN DE USUARIOS (solo Administrador)
-# ======================================================
-
-@app.route("/admin/usuarios", methods=["GET", "POST"])
-@admin_required
-def admin_usuarios():
-
-    error = None
-
-    if request.method == "POST":
-
-        try:
-
-            usuario_service.crear_usuario(
-                nombre_completo=request.form["nombre_completo"].strip(),
-                usuario=request.form["usuario"].strip(),
-                password=request.form["password"],
-                perfil_id=int(request.form["perfil_id"]),
-                pregunta_seguridad=request.form.get("pregunta_seguridad", "").strip() or "¿Cuál es tu color favorito?",
-                respuesta_seguridad=request.form.get("respuesta_seguridad", "").strip() or "sin respuesta"
-            )
-
-        except ValueError as e:
-            error = str(e)
-
-        if error is None:
-            return redirect(url_for("admin_usuarios"))
-
-    usuarios = usuario_service.obtener_usuarios()
-    perfiles = perfil_service.obtener_perfiles()
-
-    return render_template(
-        "admin/usuarios.html",
-        usuarios=usuarios,
-        perfiles=perfiles,
-        error=error
-    )
-
-
-@app.route("/admin/usuarios/<int:id>/editar", methods=["GET", "POST"])
-@admin_required
-def admin_editar_usuario(id):
-
-    error = None
-
-    if request.method == "POST":
-
-        accion = request.form.get("accion")
-
-        if accion == "datos":
-
-            usuario_service.actualizar_usuario_admin(
-                id,
-                request.form["nombre_completo"].strip(),
-                int(request.form["perfil_id"]),
-                request.form.get("activo") == "1"
-            )
-
-        elif accion == "resetear_password":
-
-            nueva = request.form.get("password_nueva", "")
-
-            if len(nueva) < 4:
-                error = "La contraseña debe tener al menos 4 caracteres."
-            else:
-                usuario_service.resetear_password_admin(id, nueva)
-
-        if error is None and accion != "resetear_password":
-            return redirect(url_for("admin_usuarios"))
-
-    user = usuario_service.obtener_usuario_por_id(id)
-    perfiles = perfil_service.obtener_perfiles()
-
-    return render_template(
-        "admin/editar_usuario.html",
-        user=user,
-        perfiles=perfiles,
-        error=error,
-        mensaje="Contraseña restablecida." if request.method == "POST" and error is None else None
-    )
-
-
-# ======================================================
-# GESTIÓN DE PERFILES (solo Administrador)
-# ======================================================
-
-@app.route("/admin/perfiles", methods=["GET", "POST"])
-@admin_required
-def admin_perfiles():
-
-    error = None
-
-    if request.method == "POST":
-
-        try:
-
-            perfil_service.crear_perfil(
-                nombre=request.form["nombre"].strip(),
-                puede_crear=request.form.get("puede_crear") == "1",
-                puede_editar=request.form.get("puede_editar") == "1"
-            )
-
-        except ValueError as e:
-            error = str(e)
-
-        if error is None:
-            return redirect(url_for("admin_perfiles"))
-
-    perfiles = perfil_service.obtener_perfiles()
-
-    return render_template(
-        "admin/perfiles.html",
-        perfiles=perfiles,
-        error=error
-    )
-
-
-@app.route("/admin/perfiles/<int:id>/editar", methods=["POST"])
-@admin_required
-def admin_editar_perfil(id):
-
-    try:
-
-        perfil_service.actualizar_perfil(
-            id,
-            request.form["nombre"].strip(),
-            request.form.get("puede_crear") == "1",
-            request.form.get("puede_editar") == "1"
-        )
-
-    except ValueError:
-        pass
-
-    return redirect(url_for("admin_perfiles"))
-
-
-@app.route("/admin/perfiles/<int:id>/eliminar", methods=["POST"])
-@admin_required
-def admin_eliminar_perfil(id):
-
-    try:
-        perfil_service.eliminar_perfil(id)
-    except ValueError:
-        pass
-
-    return redirect(url_for("admin_perfiles"))
 
 
 if __name__ == "__main__":

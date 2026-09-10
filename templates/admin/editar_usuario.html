@@ -1,0 +1,83 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Editar Usuario{% endblock %}
+{% block page_title %}Editar Usuario{% endblock %}
+
+{% block content %}
+
+{% if mensaje %}
+<div class="panel" style="background:#e8f5e9;"><strong>{{ mensaje }}</strong></div>
+{% endif %}
+
+{% if error %}
+<div class="panel" style="background:#fdecea;"><strong>{{ error }}</strong></div>
+{% endif %}
+
+<div class="panel">
+
+    <h3>Datos de {{ user.nombre_completo }} ({{ user.usuario }})</h3>
+
+    <form method="POST" style="margin-top:12px;">
+
+        <input type="hidden" name="accion" value="datos">
+
+        <div style="display:flex; gap:16px; flex-wrap:wrap;">
+
+            <div>
+                <label>Nombre completo</label>
+                <input type="text" name="nombre_completo" class="input" value="{{ user.nombre_completo }}" required>
+            </div>
+
+            <div>
+                <label>Perfil</label>
+                <select name="perfil_id" class="input" required>
+                    {% for p in perfiles %}
+                    <option value="{{ p.id }}" {% if p.id == user.perfil_id %}selected{% endif %}>
+                        {{ p.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label>Estado</label>
+                <select name="activo" class="input">
+                    <option value="1" {% if user.activo %}selected{% endif %}>Activo</option>
+                    <option value="0" {% if not user.activo %}selected{% endif %}>Inactivo</option>
+                </select>
+            </div>
+
+        </div>
+
+        <button type="submit" class="btn-primary" style="margin-top:14px;">
+            Guardar cambios
+        </button>
+
+    </form>
+
+</div>
+
+<div class="panel">
+
+    <h3>Restablecer contraseña</h3>
+    <p style="color:#777;">Úsalo cuando el usuario haya olvidado su contraseña y no recuerde
+        (o no configuró) su pregunta de seguridad.</p>
+
+    <form method="POST" style="margin-top:10px;">
+
+        <input type="hidden" name="accion" value="resetear_password">
+
+        <label>Nueva contraseña</label>
+        <input type="password" name="password_nueva" class="input" required minlength="4" style="width:260px;">
+
+        <button type="submit" class="btn-secondary" style="margin-top:10px;">
+            Restablecer contraseña
+        </button>
+
+    </form>
+
+</div>
+
+<a href="/admin/usuarios" class="btn-secondary">← Volver a Usuarios</a>
+
+{% endblock %}

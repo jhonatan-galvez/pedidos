@@ -224,5 +224,99 @@ def inicializar_database():
         )
     """)
     
+    # ==========================
+    # PERFILES (roles de usuario)
+    # ==========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS perfiles(
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            nombre TEXT UNIQUE NOT NULL,
+
+            puede_crear INTEGER DEFAULT 0,
+            puede_editar INTEGER DEFAULT 0,
+            es_admin INTEGER DEFAULT 0,
+
+            sistema INTEGER DEFAULT 0,
+
+            fecha_creacion TEXT
+
+        )
+    """)
+
+    # ==========================
+    # USUARIOS
+    # ==========================
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios(
+
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+            nombre_completo TEXT NOT NULL,
+            usuario TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+
+            perfil_id INTEGER,
+
+            pregunta_seguridad TEXT,
+            respuesta_seguridad_hash TEXT,
+
+            activo INTEGER DEFAULT 1,
+            fecha_creacion TEXT,
+            ultimo_acceso TEXT,
+
+            FOREIGN KEY(perfil_id) REFERENCES perfiles(id)
+
+        )
+    """)
+
     conexion.commit()
+
+    # ==========================
+    # SEMILLA: perfiles del sistema + cuenta master
+    # Solo se ejecuta si todavía no hay ningún perfil creado
+    # ==========================
+    cursor.execute("SELECT COUNT(*) AS n FROM perfiles")
+
+    if cursor.fetchone()["n"] == 0:
+
+        from datetime import datetime
+        from werkzeug.security import generate_password_hash
+
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Perfil Administrador: acceso total, no se puede borrar
+        cursor.execute("""
+            INSERT INTO perfiles (nombre, puede_crear, puede_editar, es_admin, sistema, fecha_creacion)
+            VALUES ('Administrador', 1, 1, 1, 1, ?)
+        """, (ahora,))
+        id_admin = cursor.lastrowid
+
+        # Perfil Vendedor: puede crear y editar pedidos, no elimina ni gestiona usuarios
+        cursor.execute("""
+            INSERT INTO perfiles (nombre, puede_crear, puede_editar, es_admin, sistema, fecha_creacion)
+            VALUES ('Vendedor', 1, 1, 0, 1, ?)
+        """, (ahora,))
+
+        # Cuenta MASTER: para pruebas del desarrollador, perfil Administrador.
+        # Usuario y contraseña iniciales: master / master123
+        # (cámbialos de inmediato desde "Mi cuenta" al entrar la primera vez)
+        cursor.execute("""
+            INSERT INTO usuarios
+            (nombre_completo, usuario, password_hash, perfil_id,
+             pregunta_seguridad, respuesta_seguridad_hash, activo, fecha_creacion)
+            VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+        """, (
+            "Cuenta Master",
+            "master",
+            generate_password_hash("master123"),
+            id_admin,
+            "¿Cuál es el nombre de este sistema?",
+            generate_password_hash("doña flori"),
+            ahora
+        ))
+
+        conexion.commit()
+
     conexion.close()

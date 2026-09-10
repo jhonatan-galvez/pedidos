@@ -1,0 +1,16 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Sin permiso{% endblock %}
+{% block page_title %}Acceso restringido{% endblock %}
+
+{% block content %}
+
+<div class="panel" style="background:#fdecea; text-align:center; padding:40px;">
+    <i class="fa-solid fa-lock" style="font-size:2em; color:#c0392b;"></i>
+    <h3 style="margin-top:14px;">{{ mensaje }}</h3>
+    <a href="/admin" class="btn-secondary" style="margin-top:14px; display:inline-block;">
+        ← Volver al panel
+    </a>
+</div>
+
+{% endblock %}
