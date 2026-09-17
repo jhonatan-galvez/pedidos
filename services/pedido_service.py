@@ -6,7 +6,12 @@ from services.cliente_service import (
     crear_cliente,
     actualizar_cliente
 )
-from services.producto_service import obtener_productos
+from services.producto_service import (
+    obtener_productos,
+    productos_bajo_stock,
+    productos_sin_stock,
+    obtener_reporte_inventario
+)
 from services.stock_service import descontar_stock_pedido, revertir_stock_pedido
 import services.caja_service as caja_service
 
@@ -590,12 +595,76 @@ def obtener_dashboard():
 
     ultimos = cursor.fetchall()
 
+    # =========================
+    # VENTAS SEMANA Y MES
+    # (comparado con periodo anterior, para ver tendencia)
+    # =========================
+    cursor.execute("""
+        SELECT IFNULL(SUM(total), 0)
+        FROM pedidos
+        WHERE DATE(fecha) >= DATE('now', '-6 days')
+    """)
+    ventas_semana = cursor.fetchone()[0]
+
+    cursor.execute("""
+        SELECT IFNULL(SUM(total), 0)
+        FROM pedidos
+        WHERE strftime('%Y-%m', fecha) = strftime('%Y-%m', 'now')
+    """)
+    ventas_mes = cursor.fetchone()[0]
+
+    # =========================
+    # TICKET PROMEDIO DEL DÍA
+    # =========================
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM pedidos
+        WHERE DATE(fecha) = DATE('now')
+    """)
+    pedidos_hoy = cursor.fetchone()[0]
+    ticket_promedio = (ventas_hoy / pedidos_hoy) if pedidos_hoy else 0
+
+    # =========================
+    # TOP 5 PRODUCTOS MÁS VENDIDOS (histórico)
+    # =========================
+    cursor.execute("""
+        SELECT
+            dp.producto,
+            SUM(dp.cantidad) AS cantidad_vendida,
+            SUM(dp.subtotal) AS importe_vendido
+        FROM detalle_pedido dp
+        INNER JOIN pedidos p ON p.id = dp.pedido_id
+        WHERE p.estado = 'ENTREGADO'
+        GROUP BY dp.producto_codigo
+        ORDER BY cantidad_vendida DESC
+        LIMIT 5
+    """)
+    top_productos = cursor.fetchall()
+
     conn.close()
+
+    # =========================
+    # INVENTARIO: valor total y alertas de stock
+    # (se calculan aparte porque usan otra tabla/servicio)
+    # =========================
+    inventario = obtener_reporte_inventario()
+    valor_inventario = sum(item["valor_stock"] for item in inventario)
+
+    bajo_stock = productos_bajo_stock()
+    sin_stock = productos_sin_stock()
 
     return {
         "estados": estados,
         "ventas_hoy": ventas_hoy,
-        "ultimos": ultimos
+        "ventas_semana": ventas_semana,
+        "ventas_mes": ventas_mes,
+        "ticket_promedio": ticket_promedio,
+        "ultimos": ultimos,
+        "top_productos": top_productos,
+        "valor_inventario": valor_inventario,
+        "total_bajo_stock": len(bajo_stock),
+        "total_sin_stock": len(sin_stock),
+        "productos_sin_stock": sin_stock[:5]
     }
 
 def obtener_pedidos_cliente(cliente_id):

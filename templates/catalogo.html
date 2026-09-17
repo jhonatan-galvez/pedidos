@@ -48,10 +48,36 @@
             <input type="text" id="buscador" placeholder="Buscar producto..." class="search">
         </div>
 
+        <div class="familia-tabs">
+
+            <button type="button" class="familia-tab active" data-familia="todos">
+                Todos <span class="familia-tab-count">{{ total_productos }}</span>
+            </button>
+
+            {% for familia in familias %}
+            <button type="button"
+                class="familia-tab {% if loop.index > 8 %}familia-tab-extra{% endif %}"
+                data-familia="{{ familia.nombre }}"
+                {% if loop.index > 8 %}style="display:none;"{% endif %}>
+                {{ familia.nombre }} <span class="familia-tab-count">{{ familia.cantidad }}</span>
+            </button>
+            {% endfor %}
+
+            {% if familias|length > 8 %}
+            <button type="button" id="btn-mas-familias" class="familia-tab-toggle">
+                Ver más ({{ familias|length - 8 }}) <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            {% endif %}
+
+        </div>
+
         <div class="product-grid">
 
             {% for producto in productos %}
-            <div class="product-card" data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }}">
+            <div class="product-card"
+                data-familia="{{ producto.producto }}"
+                data-nombre="{{ producto.producto }} {{ producto.marca }} {{ producto.presentacion }} {{ producto.codigo }}">
+
                 {% if producto.imagen %}
 
                     {% if producto.imagen.startswith("http") %}
@@ -78,11 +104,12 @@
 
                 {% endif %}
 
+                <span class="product-codigo">Cód: {{ producto.codigo }}</span>
+
                 <h3>{{ producto.producto }}</h3>
 
                 <p>
                     Marca: {{ producto.marca }}<br>
-                    <!--Tipo: {{ producto.tipo }}<br>-->
                     Presentación: {{ producto.presentacion }}<br>
                     Stock: {{ producto.stock }}
                 </p>
@@ -107,6 +134,11 @@
             {% endfor %}
 
         </div>
+
+        <p id="sin-resultados" style="display:none; color:#64748b; padding:20px 0;">
+            No se encontraron productos con ese filtro.
+        </p>
+
     </section>
 
     <aside class="cart-preview">
@@ -130,20 +162,72 @@
 <script>
     const buscador = document.getElementById("buscador");
     const productos = document.querySelectorAll(".product-card");
+    const tabs = document.querySelectorAll(".familia-tab");
+    const sinResultados = document.getElementById("sin-resultados");
 
-    buscador.addEventListener("input", function () {
+    let familiaActiva = "todos";
+
+    function aplicarFiltros() {
+
         const texto = buscador.value.toLowerCase().trim();
+        let visibles = 0;
 
         productos.forEach(function (producto) {
-            const nombre = producto.dataset.nombre.toLowerCase();
 
-            if (nombre.includes(texto)) {
+            const nombre = producto.dataset.nombre.toLowerCase();
+            const familia = producto.dataset.familia;
+
+            const coincideTexto = nombre.includes(texto);
+            const coincideFamilia = familiaActiva === "todos" || familia === familiaActiva;
+
+            if (coincideTexto && coincideFamilia) {
                 producto.style.display = "";
+                visibles++;
             } else {
                 producto.style.display = "none";
             }
         });
+
+        sinResultados.style.display = visibles === 0 ? "block" : "none";
+    }
+
+    buscador.addEventListener("input", aplicarFiltros);
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+
+            tabs.forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+
+            familiaActiva = tab.dataset.familia;
+            aplicarFiltros();
+        });
     });
+
+    // Botón "Ver más": muestra u oculta las familias menos frecuentes
+    // (las que no entraron en las primeras 8), sin tocar el scroll
+    // de la página, solo despliega más chips dentro del mismo bloque.
+    const btnMasFamilias = document.getElementById("btn-mas-familias");
+
+    if (btnMasFamilias) {
+
+        let expandido = false;
+        const extras = document.querySelectorAll(".familia-tab-extra");
+        const totalExtras = extras.length;
+
+        btnMasFamilias.addEventListener("click", function () {
+
+            expandido = !expandido;
+
+            extras.forEach(function (tab) {
+                tab.style.display = expandido ? "inline-flex" : "none";
+            });
+
+            btnMasFamilias.innerHTML = expandido
+                ? `Ver menos <i class="fa-solid fa-chevron-up"></i>`
+                : `Ver más (${totalExtras}) <i class="fa-solid fa-chevron-down"></i>`;
+        });
+    }
 </script>
 
 <script>

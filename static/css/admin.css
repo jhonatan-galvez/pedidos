@@ -136,7 +136,8 @@ body{
 
     gap:12px;
 
-    padding:14px 18px;
+    padding:0 18px;
+    height:48px;
 
     border-radius:12px;
 
@@ -162,6 +163,85 @@ body{
 
     color:white;
 
+}
+
+/* ===== Submenú (grupo Inventario) ===== */
+
+.menu-group{
+    display:block;
+    width:100%;
+    margin:0;
+    padding:0;
+}
+
+.menu-group-summary{
+
+    color:#cbd5e1;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 18px;
+    height:48px;
+    border-radius:12px;
+    transition:.25s;
+    margin-bottom:8px;
+    font-weight:500;
+
+}
+
+.menu-group-label{
+    color:inherit;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0;
+    flex:1;
+}
+
+.submenu-arrow{
+    margin-left:auto;
+    font-size:11px;
+    transition:.2s;
+    cursor:pointer;
+}
+
+.menu-group-summary:hover{
+    background:var(--sidebar-hover);
+    color:white;
+}
+
+.menu-group-summary.active{
+    background:var(--sidebar-active);
+    color:white;
+}
+
+.menu-group.open .menu-group-summary{
+    background:var(--sidebar-active);
+    color:white;
+}
+
+.menu-group.open .submenu-arrow{
+    transform:rotate(180deg);
+}
+
+.submenu{
+    display:none;
+    flex-direction:column;
+    padding-left:25px;
+    margin-left:18px;
+    margin-bottom:8px;
+    border-left:2px solid rgba(255,255,255,0.12);
+}
+
+.submenu a{
+    padding:10px 14px;
+    font-size:14px;
+}
+
+.menu-group.open .submenu{
+    display:flex;
 }
 
 .sidebar-footer{

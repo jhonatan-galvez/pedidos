@@ -72,11 +72,38 @@
                 Ventas por Producto
             </a>
 
-            <a href="/admin/reporte-inventario"
-                class="{% if request.path == '/admin/reporte-inventario' %}active{% endif %}">
-                <i class="fa-solid fa-boxes-stacked"></i>
-                Inventario
-            </a>
+            <div class="menu-group
+                {% if '/admin/reporte-inventario' in request.path or '/admin/inventario-fisico' in request.path %}open{% endif %}">
+
+                <div class="menu-group-summary
+                    {% if '/admin/reporte-inventario' in request.path or '/admin/inventario-fisico' in request.path %}active{% endif %}">
+
+                    <a href="/admin/reporte-inventario" class="menu-group-label">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        Inventario
+                    </a>
+
+                    <i class="fa-solid fa-chevron-down submenu-arrow" onclick="toggleMenuGroup(this)"></i>
+
+                </div>
+
+                <div class="submenu">
+
+                    <a href="/admin/reporte-inventario"
+                        class="{% if request.path == '/admin/reporte-inventario' %}active{% endif %}">
+                        <i class="fa-solid fa-tags"></i>
+                        Stock actual
+                    </a>
+
+                    <a href="/admin/inventario-fisico"
+                        class="{% if '/admin/inventario-fisico' in request.path %}active{% endif %}">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        Inventario físico
+                    </a>
+
+                </div>
+
+            </div>
 
             <a href="/admin/reporte-movimientos"
                 class="{% if request.path == '/admin/reporte-movimientos' %}active{% endif %}">
@@ -165,6 +192,20 @@
 
         </header>
 
+        {% with mensajes = get_flashed_messages(with_categories=true) %}
+            {% if mensajes %}
+                <div style="margin-bottom:18px;">
+                    {% for categoria, mensaje in mensajes %}
+                        <div style="padding:12px 16px; border-radius:8px; margin-bottom:8px;
+                            background: {{ '#e6f7ed' if categoria == 'success' else '#fdecea' }};
+                            color: {{ '#166534' if categoria == 'success' else '#b91c1c' }};">
+                            {{ mensaje }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
         {% block content %}
         {% endblock %}
 
@@ -174,6 +215,12 @@
 </div>
 
 {% block extra_js %}{% endblock %}
+
+<script>
+function toggleMenuGroup(icono) {
+    icono.closest(".menu-group").classList.toggle("open");
+}
+</script>
 
 </body>
 </html>

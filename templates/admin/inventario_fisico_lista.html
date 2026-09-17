@@ -1,0 +1,75 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Inventario Físico{% endblock %}
+
+{% block page_title %}
+Inventario Físico
+{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>Iniciar un nuevo conteo</h2>
+    </div>
+
+    <form method="POST" action="/admin/inventario-fisico/nuevo" style="display:flex; gap:12px; align-items:center;">
+        <input
+            type="text"
+            name="observacion"
+            placeholder="Observación (opcional)"
+            style="flex:1; padding:10px; border-radius:8px; border:1px solid #d0d5dd;">
+        <button type="submit" class="btn-primary">Crear inventario</button>
+    </form>
+
+</div>
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>Historial</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Inicio</th>
+                <th>Estado</th>
+                <th>Contados</th>
+                <th>Con diferencia</th>
+                <th>Observación</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for inv in inventarios %}
+            <tr>
+                <td><strong>{{ inv.numero }}</strong></td>
+                <td>{{ inv.fecha_inicio }}</td>
+                <td>
+                    {% if inv.estado == 'CERRADO' %}
+                        <span style="color:#166534;">✅ Cerrado</span>
+                    {% else %}
+                        <span style="color:#b45309;">🕓 Abierto</span>
+                    {% endif %}
+                </td>
+                <td>{{ inv.contados or 0 }} / {{ inv.total_productos }}</td>
+                <td>{{ inv.con_diferencia or 0 }}</td>
+                <td>{{ inv.observacion or "-" }}</td>
+                <td>
+                    <a href="/admin/inventario-fisico/{{ inv.id }}">
+                        Ver / continuar
+                    </a>
+                </td>
+            </tr>
+        {% else %}
+            <tr><td colspan="7">Todavía no has creado ningún inventario físico.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}
