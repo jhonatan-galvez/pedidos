@@ -9,12 +9,19 @@ from services.database_service import inicializar_database
 from services.database_service import conectar
 from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario
 from services.stock_service import ajustar_stock_manual, obtener_movimientos_producto, obtener_reporte_movimientos
+from services.inventario_fisico_service import (
+    crear_inventario,
+    guardar_conteo,
+    listar_inventarios,
+    obtener_inventario,
+    cerrar_inventario
+)
 from services.sync_service import sincronizar_productos
 from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
 from services.sync_log_service import (obtener_ultima_sincronizacion,
     obtener_historial)
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 import os
 import zipfile
 from flask import send_file
@@ -131,7 +138,33 @@ def index():
 @app.route("/catalogo")
 def catalogo():
     productos = obtener_productos()
-    return render_template("catalogo.html", productos=productos)
+
+    # Se ordena por código, que es el orden por defecto que ve
+    # el cliente. El agrupado por familia (columna "producto")
+    # se hace en el propio template mediante las pestañas JS.
+    productos = sorted(productos, key=lambda p: (p["codigo"] or ""))
+
+    # Familias (columna "producto") con su cantidad de productos,
+    # para mostrar el contador en cada pestaña y ordenarlas por
+    # relevancia (las que tienen más productos van primero).
+    conteo_familias = {}
+    for p in productos:
+        nombre = p["producto"]
+        if nombre:
+            conteo_familias[nombre] = conteo_familias.get(nombre, 0) + 1
+
+    familias = sorted(
+        conteo_familias.items(),
+        key=lambda item: (-item[1], item[0])
+    )
+    familias = [{"nombre": nombre, "cantidad": cantidad} for nombre, cantidad in familias]
+
+    return render_template(
+        "catalogo.html",
+        productos=productos,
+        familias=familias,
+        total_productos=len(productos)
+    )
 
 @app.route("/checkout")
 def checkout():
@@ -204,7 +237,7 @@ def ver_pedido(id):
 ####################################
 @app.route("/admin")
 def admin():
-    return redirect(url_for("admin_pedidos"))
+    return redirect(url_for("dashboard"))
 
 @app.route("/admin/pedidos")
 def admin_pedidos():
@@ -1022,6 +1055,81 @@ def reporte_inventario():
         "admin/reporte_inventario.html",
         inventario=inventario
     )
+
+# ======================================================
+# INVENTARIO FÍSICO (stock real vs stock teórico)
+# ======================================================
+
+@app.route("/admin/inventario-fisico")
+def inventario_fisico_lista():
+
+    inventarios = listar_inventarios()
+
+    return render_template(
+        "admin/inventario_fisico_lista.html",
+        inventarios=inventarios
+    )
+
+
+@app.post("/admin/inventario-fisico/nuevo")
+def inventario_fisico_nuevo():
+
+    observacion = request.form.get("observacion", "")
+
+    nuevo = crear_inventario(
+        observacion=observacion,
+        usuario=session.get("nombre_completo") or session.get("usuario_login")
+    )
+
+    return redirect(f"/admin/inventario-fisico/{nuevo['id']}")
+
+
+@app.route("/admin/inventario-fisico/<int:inventario_id>")
+def inventario_fisico_detalle(inventario_id):
+
+    inventario = obtener_inventario(inventario_id)
+
+    if inventario is None:
+        return redirect("/admin/inventario-fisico")
+
+    return render_template(
+        "admin/inventario_fisico.html",
+        inventario=inventario
+    )
+
+
+@app.post("/admin/inventario-fisico/<int:inventario_id>/guardar")
+def inventario_fisico_guardar(inventario_id):
+
+    data = request.get_json(force=True)
+
+    codigo = data.get("codigo")
+    stock_real = data.get("stock_real")
+
+    if codigo is None or stock_real is None:
+        return jsonify({"ok": False, "mensaje": "Datos incompletos"}), 400
+
+    try:
+        resultado = guardar_conteo(inventario_id, codigo, int(stock_real))
+        return jsonify({"ok": True, **resultado})
+
+    except Exception as e:
+        return jsonify({"ok": False, "mensaje": str(e)}), 400
+
+
+@app.post("/admin/inventario-fisico/<int:inventario_id>/cerrar")
+def inventario_fisico_cerrar(inventario_id):
+
+    try:
+        resultado = cerrar_inventario(inventario_id)
+        flash(f"Inventario {resultado['numero']} cerrado. "
+              f"{resultado['ajustados']} producto(s) ajustado(s).", "success")
+
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(f"/admin/inventario-fisico/{inventario_id}")
+
 
 # ======================================================
 # DESCARGAR REPORTE DE INVENTARIO EN EXCEL

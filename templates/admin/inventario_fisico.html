@@ -1,0 +1,140 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | {{ inventario.cabecera.numero }}{% endblock %}
+
+{% block page_title %}
+{{ inventario.cabecera.numero }} — {{ inventario.cabecera.fecha_inicio }}
+{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>
+            {% if inventario.cabecera.estado == 'CERRADO' %}
+                ✅ Inventario cerrado el {{ inventario.cabecera.fecha_cierre }}
+            {% else %}
+                🕓 Inventario en curso
+            {% endif %}
+        </h2>
+    </div>
+
+    <p style="color:#64748b; font-size:14px;">
+        {{ inventario.cabecera.observacion or "Sin observación." }}
+    </p>
+
+    {% if inventario.cabecera.estado != 'CERRADO' %}
+        <form method="POST"
+              action="/admin/inventario-fisico/{{ inventario.cabecera.id }}/cerrar"
+              onsubmit="return confirm('¿Cerrar este inventario? El stock real reemplazará el stock teórico de cada producto contado. Esta acción queda registrada y no se puede deshacer.');">
+            <button type="submit" class="btn-primary" style="background:#b91c1c;">
+                🔒 Cerrar inventario y aplicar ajustes
+            </button>
+        </form>
+    {% endif %}
+
+</div>
+
+{% for familia, grupo in inventario.detalle | groupby('tipo') %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>{{ familia or 'Sin familia' }}</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Presentación</th>
+                <th>Stock teórico</th>
+                <th>Stock real</th>
+                <th>Diferencia</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in grupo %}
+            <tr>
+                <td>{{ item.producto_codigo }}</td>
+                <td>{{ item.producto }}</td>
+                <td>{{ item.marca }}</td>
+                <td>{{ item.presentacion }}</td>
+                <td>{{ item.stock_teorico }}</td>
+                <td>
+                    <input
+                        type="number"
+                        min="0"
+                        class="input-stock-real"
+                        data-codigo="{{ item.producto_codigo }}"
+                        value="{{ item.stock_real if item.stock_real is not none else '' }}"
+                        {% if inventario.cabecera.estado == 'CERRADO' %}disabled{% endif %}
+                        style="width:80px; padding:6px; border-radius:6px; border:1px solid #d0d5dd;">
+                </td>
+                <td class="celda-diferencia"
+                    style="font-weight:600;
+                    color: {{ '#b91c1c' if item.diferencia and item.diferencia < 0
+                              else ('#166534' if item.diferencia and item.diferencia > 0 else '#64748b') }};">
+                    {{ item.diferencia if item.diferencia is not none else '-' }}
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endfor %}
+
+<script>
+const inventarioId = {{ inventario.cabecera.id }};
+
+document.querySelectorAll(".input-stock-real").forEach(function (input) {
+
+    let timeoutId = null;
+
+    input.addEventListener("input", function () {
+
+        clearTimeout(timeoutId);
+
+        // Espera medio segundo sin que el usuario escriba antes de
+        // guardar, para no disparar una petición por cada tecla.
+        timeoutId = setTimeout(function () {
+
+            const codigo = input.dataset.codigo;
+            const valor = input.value;
+
+            if (valor === "") return;
+
+            fetch(`/admin/inventario-fisico/${inventarioId}/guardar`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ codigo: codigo, stock_real: valor })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) {
+                    alert(data.mensaje || "No se pudo guardar el conteo.");
+                    return;
+                }
+
+                const fila = input.closest("tr");
+                const celdaDiferencia = fila.querySelector(".celda-diferencia");
+                celdaDiferencia.textContent = data.diferencia;
+                celdaDiferencia.style.color = data.diferencia < 0
+                    ? "#b91c1c"
+                    : (data.diferencia > 0 ? "#166534" : "#64748b");
+            })
+            .catch(() => alert("Error de conexión al guardar el conteo."));
+
+        }, 500);
+
+    });
+
+});
+</script>
+
+{% endblock %}

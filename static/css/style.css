@@ -207,10 +207,90 @@ nav a:hover{
     border-radius: 8px;
 }
 
+.familia-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 26px;
+}
+
+.familia-tab {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid #d5dbe3;
+    background: #fff;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.familia-tab-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 1px 7px;
+    border-radius: 999px;
+}
+
+.familia-tab.active .familia-tab-count {
+    color: #0d59ca;
+    background: #e8f0fe;
+}
+
+.familia-tab-toggle {
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px dashed #94a3b8;
+    background: transparent;
+    color: #64748b;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.familia-tab-toggle:hover {
+    border-color: #0d59ca;
+    color: #0d59ca;
+}
+
+.familia-tab:hover {
+    border-color: #0d59ca;
+    color: #0d59ca;
+}
+
+.familia-tab.active {
+    background: #0d59ca;
+    border-color: #0d59ca;
+    color: #fff;
+}
+
 .product-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 22px;
+}
+
+.product-codigo {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 6px;
+    margin-bottom: 8px;
 }
 
 .product-card {

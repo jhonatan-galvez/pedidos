@@ -128,17 +128,93 @@ Centro de Control
 
         <div class="summary-item">
 
-            <span>Estados activos</span>
+            <span>Ticket promedio (hoy)</span>
 
             <strong>
 
-                {{ data.estados | length }}
+                S/ {{ "%.2f"|format(data.ticket_promedio) }}
 
             </strong>
 
         </div>
 
     </div>
+
+    <!-- Ventas semana / mes -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            <h2>📈 Ventas acumuladas</h2>
+        </div>
+
+        <div class="summary-item">
+            <span>Últimos 7 días</span>
+            <strong>S/ {{ "%.2f"|format(data.ventas_semana) }}</strong>
+        </div>
+
+        <div class="summary-item">
+            <span>Mes actual</span>
+            <strong>S/ {{ "%.2f"|format(data.ventas_mes) }}</strong>
+        </div>
+
+    </div>
+
+    <!-- Inventario -->
+
+    <div class="panel">
+
+        <div class="panel-title">
+            <h2>📦 Estado del inventario</h2>
+        </div>
+
+        <div class="summary-item">
+            <span>Valor total en stock</span>
+            <strong>S/ {{ "%.2f"|format(data.valor_inventario) }}</strong>
+        </div>
+
+        <div class="summary-item">
+            <span>Productos con stock bajo</span>
+            <strong>{{ data.total_bajo_stock }}</strong>
+        </div>
+
+        <div class="summary-item">
+            <span>Productos sin stock</span>
+            <strong>{{ data.total_sin_stock }}</strong>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ================= TOP PRODUCTOS ================= -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>🏆 Top 5 productos más vendidos</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Producto</th>
+                <th>Cantidad vendida</th>
+                <th>Importe generado</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for tp in data.top_productos %}
+            <tr>
+                <td>{{ tp.producto }}</td>
+                <td>{{ tp.cantidad_vendida }}</td>
+                <td>S/ {{ "%.2f"|format(tp.importe_vendido) }}</td>
+            </tr>
+        {% else %}
+            <tr><td colspan="3">Aún no hay ventas registradas.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
 
 </div>
 
