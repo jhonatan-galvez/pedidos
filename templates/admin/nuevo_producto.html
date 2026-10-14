@@ -1,0 +1,212 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Nuevo producto{% endblock %}
+
+{% block page_title %}
+Nuevo producto
+{% endblock %}
+
+{% block content %}
+
+<div class="erp-container">
+
+    <!-- ================= HEADER ================= -->
+
+    <div class="erp-header">
+
+        <div>
+            <h1 class="erp-title">
+                ➕ Nuevo producto
+            </h1>
+
+            <p class="erp-subtitle">
+                Agrega un producto manualmente al catálogo
+            </p>
+        </div>
+
+        <a href="/admin/productos" class="btn-secondary">
+            ← Volver
+        </a>
+
+    </div>
+
+    {% if error %}
+    <div style="background:#fdecea; color:#b91c1c; padding:12px 16px; border-radius:8px; margin-bottom:16px;">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <!-- ================= FORMULARIO ================= -->
+
+    <div class="product-card edit-product-card">
+
+        <form method="POST">
+
+            <h3 class="section-title">
+                Datos del producto
+            </h3>
+
+            <div class="form-grid">
+
+                <div class="form-group">
+
+                    <label>
+                        Código *
+                    </label>
+
+                    <input
+                        type="text"
+                        name="codigo"
+                        value="{{ form.get('codigo', '') }}"
+                        placeholder="Ej. 078"
+                        required
+                        autofocus>
+
+                    <p style="color:#777; font-size:0.85em; margin-top:4px;">
+                        Debe ser único. Si ya existe, el sistema te avisará.
+                        La foto del producto se asigna sola si se llama
+                        igual que el código (ej. 078.jpg).
+                    </p>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Producto *
+                    </label>
+
+                    <input
+                        type="text"
+                        name="producto"
+                        list="lista-nombres"
+                        value="{{ form.get('producto', '') }}"
+                        autocomplete="off"
+                        required>
+
+                    <datalist id="lista-nombres">
+                        {% for n in nombres %}
+                        <option value="{{ n }}">
+                        {% endfor %}
+                    </datalist>
+
+                    <p style="color:#777; font-size:0.85em; margin-top:4px;">
+                        Este nombre es también la familia en el catálogo.
+                        Elige uno de la lista para que se agrupe con los demás
+                        (ej. todos los "detergente" juntos).
+                    </p>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Marca
+                    </label>
+
+                    <input
+                        type="text"
+                        name="marca"
+                        value="{{ form.get('marca', '') }}">
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Tipo
+                    </label>
+
+                    <input
+                        type="text"
+                        name="tipo"
+                        value="{{ form.get('tipo', '') }}">
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Presentación
+                    </label>
+
+                    <input
+                        type="text"
+                        name="presentacion"
+                        value="{{ form.get('presentacion', '') }}"
+                        placeholder="Ej. 900ml">
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Stock inicial
+                    </label>
+
+                    <input
+                        type="number"
+                        name="stock"
+                        value="{{ form.get('stock', '0') }}"
+                        min="0"
+                        step="1">
+
+                    <p style="color:#777; font-size:0.85em; margin-top:4px;">
+                        Queda registrado en el historial de movimientos de stock.
+                    </p>
+
+                </div>
+
+                <div class="form-group">
+
+                    <label>
+                        Precio venta
+                    </label>
+
+                    <div class="price-input">
+
+                        <span>
+                            S/
+                        </span>
+
+                        <input
+                            type="number"
+                            name="precio"
+                            value="{{ form.get('precio', '') }}"
+                            step="0.01"
+                            min="0"
+                            required>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="product-actions">
+
+                <button
+                    type="submit"
+                    class="btn-primary">
+
+                    💾 Crear producto
+
+                </button>
+
+                <a
+                    href="/admin/productos"
+                    class="btn-secondary">
+
+                    Cancelar
+
+                </a>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

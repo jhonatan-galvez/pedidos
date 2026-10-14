@@ -1,0 +1,190 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Compras{% endblock %}
+
+{% block page_title %}
+Compras
+{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>🧾 Registrar nueva compra</h2>
+    </div>
+
+    <form method="POST" action="/admin/compras/nueva" id="form-compra">
+
+        <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <input type="text" name="proveedor" placeholder="Proveedor (opcional)"
+                style="flex:1; padding:10px; border-radius:8px; border:1px solid #d0d5dd;">
+            <input type="text" name="observacion" placeholder="Observación (opcional)"
+                style="flex:1; padding:10px; border-radius:8px; border:1px solid #d0d5dd;">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Stock</th>
+                    <th>Cantidad</th>
+                    <th>Precio unitario (S/)</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="filas-compra"></tbody>
+        </table>
+
+        <button type="button" id="btn-agregar-fila" class="btn-secondary" style="margin-top:12px;">
+            + Agregar producto
+        </button>
+
+        <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+            <strong>Total: S/ <span id="total-compra">0.00</span></strong>
+            <button type="submit" class="btn-primary">Registrar compra</button>
+        </div>
+
+    </form>
+
+</div>
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>📜 Historial de compras</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Número</th>
+                <th>Proveedor</th>
+                <th>Fecha</th>
+                <th>Total</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for compra in compras %}
+            <tr>
+                <td><strong>{{ compra.numero }}</strong></td>
+                <td>{{ compra.proveedor or "-" }}</td>
+                <td>{{ compra.fecha }}</td>
+                <td>S/ {{ "%.2f"|format(compra.total) }}</td>
+                <td><a href="/admin/compras/{{ compra.id }}">Ver detalle</a></td>
+            </tr>
+        {% else %}
+            <tr><td colspan="5">Todavía no has registrado ninguna compra.</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<script>
+let contadorFilas = 0;
+
+// Lista completa de productos (código + nombre completo), para armar
+// el desplegable de cada fila sin tener que escribir el código a mano.
+const PRODUCTOS = {{ productos | tojson }};
+
+function opcionesProductos() {
+    let html = '<option value="">Selecciona un producto...</option>';
+    PRODUCTOS.forEach(function (p) {
+        const etiqueta = `${p.codigo} - ${p.producto}${p.marca ? " " + p.marca : ""}${p.presentacion ? " (" + p.presentacion + ")" : ""}`;
+        html += `<option value="${p.codigo}">${etiqueta}</option>`;
+    });
+    return html;
+}
+
+function agregarFila() {
+
+    contadorFilas++;
+    const tbody = document.getElementById("filas-compra");
+
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+        <td>
+            <select name="codigo[]" class="input-codigo" style="width:260px; padding:6px;">
+                ${opcionesProductos()}
+            </select>
+        </td>
+        <td class="celda-nombre" style="color:#64748b;">-</td>
+        <td><input type="number" name="cantidad[]" min="1" value="1" class="input-cantidad" style="width:70px; padding:6px;"></td>
+        <td><input type="number" name="precio_unitario[]" min="0" step="0.01" class="input-precio" style="width:90px; padding:6px;"></td>
+        <td class="celda-subtotal">S/ 0.00</td>
+        <td><button type="button" class="btn-quitar-fila" style="color:#b91c1c; border:none; background:none; cursor:pointer;">✕</button></td>
+    `;
+
+    tbody.appendChild(fila);
+
+    const inputCodigo = fila.querySelector(".input-codigo");
+    const celdaNombre = fila.querySelector(".celda-nombre");
+    const inputCantidad = fila.querySelector(".input-cantidad");
+    const inputPrecio = fila.querySelector(".input-precio");
+    const celdaSubtotal = fila.querySelector(".celda-subtotal");
+
+    function recalcularSubtotal() {
+        const cantidad = parseFloat(inputCantidad.value) || 0;
+        const precio = parseFloat(inputPrecio.value) || 0;
+        const subtotal = cantidad * precio;
+        celdaSubtotal.textContent = "S/ " + subtotal.toFixed(2);
+        recalcularTotal();
+    }
+
+    // "change" en un <select> se dispara al elegir una opción (con
+    // mouse o con teclado + Enter), sin los problemas que tenía el
+    // input de texto (Enter enviaba el formulario / quedaba en blanco).
+    inputCodigo.addEventListener("change", function () {
+        const codigo = inputCodigo.value;
+        if (!codigo) {
+            celdaNombre.textContent = "-";
+            return;
+        }
+
+        fetch(`/admin/productos/buscar/${codigo}`)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) {
+                    celdaNombre.textContent = "No encontrado";
+                    celdaNombre.style.color = "#b91c1c";
+                    return;
+                }
+                celdaNombre.textContent = `Stock actual: ${data.stock}`;
+                celdaNombre.style.color = "#111";
+
+                if (!inputPrecio.value && data.precio_compra > 0) {
+                    inputPrecio.value = data.precio_compra.toFixed(2);
+                    recalcularSubtotal();
+                }
+            });
+    });
+
+    inputCantidad.addEventListener("input", recalcularSubtotal);
+    inputPrecio.addEventListener("input", recalcularSubtotal);
+
+    fila.querySelector(".btn-quitar-fila").addEventListener("click", function () {
+        fila.remove();
+        recalcularTotal();
+    });
+}
+
+function recalcularTotal() {
+    let total = 0;
+    document.querySelectorAll("#filas-compra tr").forEach(function (fila) {
+        const cantidad = parseFloat(fila.querySelector(".input-cantidad")?.value) || 0;
+        const precio = parseFloat(fila.querySelector(".input-precio")?.value) || 0;
+        total += cantidad * precio;
+    });
+    document.getElementById("total-compra").textContent = total.toFixed(2);
+}
+
+document.getElementById("btn-agregar-fila").addEventListener("click", agregarFila);
+
+// Arranca con una fila lista para usar
+agregarFila();
+</script>
+
+{% endblock %}

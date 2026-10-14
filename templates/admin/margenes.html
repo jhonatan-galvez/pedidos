@@ -1,0 +1,64 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Márgenes de ganancia{% endblock %}
+
+{% block page_title %}
+Márgenes de ganancia
+{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>Precio de venta vs costo promedio</h2>
+    </div>
+
+    <p style="color:#64748b; font-size:13px; margin-bottom:16px;">
+        El costo se calcula automáticamente como promedio ponderado cada vez
+        que registras una compra. Para los productos que aún no tienen compras
+        registradas no se puede calcular su margen (%).
+    </p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Stock</th>
+                <th>Precio venta</th>
+                <th>Costo</th>
+                <th>Margen S/</th>
+                <th>Margen %</th>
+                <th>Ganancia potencial (stock actual)</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in productos %}
+            <tr>
+                <td>{{ p.codigo }}</td>
+                <td>{{ p.producto }}</td>
+                <td>{{ p.marca }}</td>
+                <td>{{ p.stock }}</td>
+                <td>S/ {{ "%.2f"|format(p.precio) }}</td>
+                <td>S/ {{ "%.2f"|format(p.costo) }}</td>
+                <td style="font-weight:600; color: {{ '#166534' if p.margen_soles > 0 else ('#b91c1c' if p.margen_soles < 0 else '#64748b') }};">
+                    S/ {{ "%.2f"|format(p.margen_soles) }}
+                </td>
+                <td>
+                    {% if p.margen_pct is not none %}
+                        {{ "%.1f"|format(p.margen_pct) }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>S/ {{ "%.2f"|format(p.valor_potencial_ganancia) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+{% endblock %}

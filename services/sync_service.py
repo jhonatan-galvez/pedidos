@@ -42,7 +42,18 @@ def obtener_imagen_producto(codigo):
 
     return "SIN_IMAGEN.jpg"
 
-def sincronizar_productos():
+def sincronizar_productos(actualizar_stock=False, desactivar_faltantes=False):
+    """
+    actualizar_stock: si es False (por defecto), el stock que ya tienes
+    en la base de datos NO se toca, sin importar lo que diga el Excel
+    en esa fila. Solo se actualizan nombre, marca, tipo, presentación
+    y precio. Los productos NUEVOS siempre toman su stock inicial del
+    Excel (no hay nada que preservar).
+
+    desactivar_faltantes: si es False (por defecto), los productos que
+    existen en tu base pero no aparecen en este Excel se dejan tal
+    cual (ni se tocan ni se desactivan).
+    """
     inicio = time.perf_counter()
     df = leer_excel()
     conn = conectar()
@@ -79,6 +90,7 @@ def sincronizar_productos():
         resultado = cursor.fetchone()
 
         # 🚀 CASO 1: NO EXISTE → INSERTAR
+        # (siempre toma el stock del Excel, no hay stock previo que preservar)
         if not resultado:
             cursor.execute("""
                 INSERT INTO productos
@@ -99,12 +111,16 @@ def sincronizar_productos():
         # 🔄 CASO 2: EXISTE → ACTUALIZAR
         else:
 
+            # Si no se pidió actualizar stock, se conserva el que ya
+            # está en la base (ignora lo que diga el Excel en esa celda).
+            stock_valor = int(row["stock"]) if actualizar_stock else resultado["stock"]
+
             if (
                 resultado["producto"] == row["producto"] and
                 resultado["marca"] == row["marca"] and
                 resultado["tipo"] == row["tipo"] and
                 resultado["presentacion"] == row["presentacion"] and
-                resultado["stock"] == int(row["stock"]) and
+                resultado["stock"] == stock_valor and
                 resultado["precio"] == float(row["precio"])
             ):
                 sin_cambios += 1
@@ -127,7 +143,7 @@ def sincronizar_productos():
                     row["marca"],
                     row["tipo"],
                     row["presentacion"],
-                    int(row["stock"]),
+                    stock_valor,
                     float(row["precio"]),
                     codigo
 
@@ -137,27 +153,30 @@ def sincronizar_productos():
 
     # ==========================================
     # DESACTIVAR PRODUCTOS QUE YA NO EXISTEN
+    # (solo si se pidió explícitamente)
     # ==========================================
 
-    cursor.execute("""
-        SELECT codigo
-        FROM productos
-        WHERE activo = 1
-    """)
+    if desactivar_faltantes:
 
-    for row in cursor.fetchall():
+        cursor.execute("""
+            SELECT codigo
+            FROM productos
+            WHERE activo = 1
+        """)
 
-        codigo_db = row["codigo"]
+        for row in cursor.fetchall():
 
-        if codigo_db not in codigos_excel:
+            codigo_db = row["codigo"]
 
-            cursor.execute("""
-                UPDATE productos
-                SET activo = 0
-                WHERE codigo = ?
-            """, (codigo_db,))
+            if codigo_db not in codigos_excel:
 
-            desactivados += 1
+                cursor.execute("""
+                    UPDATE productos
+                    SET activo = 0
+                    WHERE codigo = ?
+                """, (codigo_db,))
+
+                desactivados += 1
 
     conn.commit()
 

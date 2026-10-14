@@ -34,6 +34,28 @@
 
     </div>
 
+    <!-- ================= CASILLAS DE SEGURIDAD ================= -->
+    <div class="erp-card full">
+
+        <h3>Antes de sincronizar</h3>
+
+        <p class="muted" style="margin-bottom:24px;">
+            Por defecto, sincronizar solo actualiza nombre, marca, tipo,
+            presentación y precio. 
+        </p>
+
+        <label style="display:flex; align-items:center; gap:10px; margin-bottom:10px; cursor:pointer;">
+            <input type="checkbox" id="chkActualizarStock">
+            <span>Actualizar también el <strong>stock</strong> con este Excel.</span>
+        </label>
+
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+            <input type="checkbox" id="chkDesactivarFaltantes">
+            <span>Desactivar productos que <strong>no aparezcan</strong> en este Excel.</span>
+        </label>
+
+    </div>
+
     <!-- ================= ÚLTIMA SINCRONIZACIÓN ================= -->
     <div class="erp-card full">
 
@@ -150,9 +172,17 @@ document.getElementById("btnSincronizar").addEventListener("click", async () => 
     btn.disabled = true;
     btn.innerText = "Sincronizando...";
 
+    const actualizarStock = document.getElementById("chkActualizarStock").checked;
+    const desactivarFaltantes = document.getElementById("chkDesactivarFaltantes").checked;
+
     try {
         const respuesta = await fetch("/admin/sincronizar", {
-            method: "POST"
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                actualizar_stock: actualizarStock,
+                desactivar_faltantes: desactivarFaltantes
+            })
         });
 
         await respuesta.json();
@@ -184,9 +214,14 @@ inputExcel.addEventListener("change", async () => {
 
     const archivo = inputExcel.files[0];
 
+    const actualizarStock = document.getElementById("chkActualizarStock").checked;
+    const desactivarFaltantes = document.getElementById("chkDesactivarFaltantes").checked;
+
     const formData = new FormData();
 
     formData.append("archivo", archivo);
+    formData.append("actualizar_stock", actualizarStock ? "true" : "false");
+    formData.append("desactivar_faltantes", desactivarFaltantes ? "true" : "false");
 
     const boton = document.getElementById("btnSubirExcel");
 

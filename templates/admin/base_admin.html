@@ -60,27 +60,31 @@
                 Pedidos
             </a>
 
-            <a href="/admin/reporte-ventas"
-                class="{% if request.path == '/admin/reporte-ventas' %}active{% endif %}">
-                <i class="fa-solid fa-file-excel"></i>
-                Reportes
+            {% if usuario_actual and usuario_actual.es_admin %}
+            <a href="/admin/compras"
+                class="{% if '/admin/compras' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-truck-ramp-box"></i>
+                Compras
             </a>
+            {% endif %}
 
-            <a href="/admin/reporte-productos"
-                class="{% if request.path == '/admin/reporte-productos' %}active{% endif %}">
-                <i class="fa-solid fa-chart-column"></i>
-                Ventas por Producto
+            <a href="/admin/inventario-fisico"
+                class="{% if '/admin/inventario-fisico' in request.path %}active{% endif %}">
+                <i class="fa-solid fa-clipboard-check"></i>
+                Inventario
             </a>
 
             <div class="menu-group
-                {% if '/admin/reporte-inventario' in request.path or '/admin/inventario-fisico' in request.path %}open{% endif %}">
+                {% if request.path in ['/admin/reporte-ventas', '/admin/reporte-productos',
+                    '/admin/reporte-movimientos', '/admin/reporte-inventario', '/admin/margenes'] %}open{% endif %}">
 
                 <div class="menu-group-summary
-                    {% if '/admin/reporte-inventario' in request.path or '/admin/inventario-fisico' in request.path %}active{% endif %}">
+                    {% if request.path in ['/admin/reporte-ventas', '/admin/reporte-productos',
+                        '/admin/reporte-movimientos', '/admin/reporte-inventario', '/admin/margenes'] %}active{% endif %}">
 
-                    <a href="/admin/reporte-inventario" class="menu-group-label">
-                        <i class="fa-solid fa-boxes-stacked"></i>
-                        Inventario
+                    <a href="/admin/reporte-ventas" class="menu-group-label">
+                        <i class="fa-solid fa-file-excel"></i>
+                        Reportes
                     </a>
 
                     <i class="fa-solid fa-chevron-down submenu-arrow" onclick="toggleMenuGroup(this)"></i>
@@ -89,27 +93,41 @@
 
                 <div class="submenu">
 
+                    <a href="/admin/reporte-ventas"
+                        class="{% if request.path == '/admin/reporte-ventas' %}active{% endif %}">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                        Ventas
+                    </a>
+
+                    <a href="/admin/reporte-productos"
+                        class="{% if request.path == '/admin/reporte-productos' %}active{% endif %}">
+                        <i class="fa-solid fa-chart-column"></i>
+                        Ventas por Producto
+                    </a>
+
+                    <a href="/admin/reporte-movimientos"
+                        class="{% if request.path == '/admin/reporte-movimientos' %}active{% endif %}">
+                        <i class="fa-solid fa-right-left"></i>
+                        Movimientos de Stock
+                    </a>
+
                     <a href="/admin/reporte-inventario"
                         class="{% if request.path == '/admin/reporte-inventario' %}active{% endif %}">
                         <i class="fa-solid fa-tags"></i>
                         Stock actual
                     </a>
 
-                    <a href="/admin/inventario-fisico"
-                        class="{% if '/admin/inventario-fisico' in request.path %}active{% endif %}">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        Inventario físico
+                    {% if usuario_actual and usuario_actual.es_admin %}
+                    <a href="/admin/margenes"
+                        class="{% if request.path == '/admin/margenes' %}active{% endif %}">
+                        <i class="fa-solid fa-percent"></i>
+                        Márgenes de ganancia
                     </a>
+                    {% endif %}
 
                 </div>
 
             </div>
-
-            <a href="/admin/reporte-movimientos"
-                class="{% if request.path == '/admin/reporte-movimientos' %}active{% endif %}">
-                <i class="fa-solid fa-right-left"></i>
-                Movimientos de Stock
-            </a>
 
             <a href="/admin/caja"
                 class="{% if request.path == '/admin/caja' %}active{% endif %}">
@@ -117,11 +135,38 @@
                 Caja / Recaudación
             </a>
 
-            <a href="/admin/productos"
-               class="{% if request.path == '/admin/productos' %}active{% endif %}">
-                <i class="fa-solid fa-box"></i>
-                Productos
-            </a>
+            <div class="menu-group
+                {% if request.path in ['/admin/productos', '/admin/sincronizacion'] %}open{% endif %}">
+
+                <div class="menu-group-summary
+                    {% if request.path in ['/admin/productos', '/admin/sincronizacion'] %}active{% endif %}">
+
+                    <a href="/admin/productos" class="menu-group-label">
+                        <i class="fa-solid fa-box"></i>
+                        Catálogo
+                    </a>
+
+                    <i class="fa-solid fa-chevron-down submenu-arrow" onclick="toggleMenuGroup(this)"></i>
+
+                </div>
+
+                <div class="submenu">
+
+                    <a href="/admin/productos"
+                        class="{% if request.path == '/admin/productos' %}active{% endif %}">
+                        <i class="fa-solid fa-boxes-stacked"></i>
+                        Productos
+                    </a>
+
+                    <a href="/admin/sincronizacion"
+                        class="{% if request.path == '/admin/sincronizacion' %}active{% endif %}">
+                        <i class="fa-solid fa-rotate"></i>
+                        Sincronización
+                    </a>
+
+                </div>
+
+            </div>
 
             <a href="/admin/clientes"
                class="{% if request.path == '/admin/clientes' %}active{% endif %}">
@@ -129,25 +174,40 @@
                 Clientes
             </a>
 
-            <a href="/admin/sincronizacion"
-               class="{% if request.path == '/admin/sincronizacion' %}active{% endif %}">
-                <i class="fa-solid fa-rotate"></i>
-                Sincronización
-            </a>
-
             {% if usuario_actual and usuario_actual.es_admin %}
 
-            <a href="/admin/usuarios"
-               class="{% if request.path == '/admin/usuarios' %}active{% endif %}">
-                <i class="fa-solid fa-user-gear"></i>
-                Usuarios
-            </a>
+            <div class="menu-group
+                {% if request.path in ['/admin/usuarios', '/admin/perfiles'] %}open{% endif %}">
 
-            <a href="/admin/perfiles"
-               class="{% if request.path == '/admin/perfiles' %}active{% endif %}">
-                <i class="fa-solid fa-shield-halved"></i>
-                Perfiles
-            </a>
+                <div class="menu-group-summary
+                    {% if request.path in ['/admin/usuarios', '/admin/perfiles'] %}active{% endif %}">
+
+                    <a href="/admin/usuarios" class="menu-group-label">
+                        <i class="fa-solid fa-user-gear"></i>
+                        Usuario
+                    </a>
+
+                    <i class="fa-solid fa-chevron-down submenu-arrow" onclick="toggleMenuGroup(this)"></i>
+
+                </div>
+
+                <div class="submenu">
+
+                    <a href="/admin/usuarios"
+                        class="{% if request.path == '/admin/usuarios' %}active{% endif %}">
+                        <i class="fa-solid fa-user-gear"></i>
+                        Usuarios
+                    </a>
+
+                    <a href="/admin/perfiles"
+                        class="{% if request.path == '/admin/perfiles' %}active{% endif %}">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        Perfiles
+                    </a>
+
+                </div>
+
+            </div>
 
             {% endif %}
 
