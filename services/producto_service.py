@@ -1,3 +1,5 @@
+import sqlite3
+from datetime import datetime
 from services.database_service import conectar
 
 
@@ -258,8 +260,110 @@ def actualizar_producto(
         conn.close()
 
 
+# ======================================================
+# CREAR UN PRODUCTO NUEVO (alta manual)
+# ======================================================
+# - Verifica que el código no exista (sin distinguir mayúsculas,
+#   y avisando si existe pero está desactivado).
+# - Guarda el producto con su stock inicial.
+# - Si el stock inicial es mayor que 0, deja el movimiento en
+#   movimientos_stock (tipo REGULARIZACION) dentro de la MISMA
+#   transacción: o se guarda todo, o no se guarda nada.
+# Lanza ValueError con un mensaje listo para mostrar al usuario.
+# ======================================================
+def crear_producto(codigo, producto, marca, tipo, presentacion,
+                   stock_inicial, precio, imagen="SIN_IMAGEN.jpg"):
+
+    codigo = (codigo or "").strip()
+    producto = (producto or "").strip()
+
+    if not codigo:
+        raise ValueError("El código es obligatorio.")
+
+    if not producto:
+        raise ValueError("El nombre del producto es obligatorio.")
+
+    if stock_inicial < 0:
+        raise ValueError("El stock inicial no puede ser negativo.")
+
+    if precio < 0:
+        raise ValueError("El precio no puede ser negativo.")
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+            SELECT producto, activo
+            FROM productos
+            WHERE codigo = ? COLLATE NOCASE
+        """, (codigo,))
+
+        existente = cursor.fetchone()
+
+        if existente is not None:
+            estado = "" if existente["activo"] == 1 else " (está desactivado)"
+            raise ValueError(
+                f"El código {codigo} ya existe: {existente['producto']}{estado}. "
+                "Usa otro código."
+            )
+
+        ahora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        cursor.execute("""
+            INSERT INTO productos
+            (codigo, producto, marca, tipo, presentacion, stock, precio,
+             imagen, activo, fecha_creacion, fecha_actualizacion)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        """, (
+            codigo, producto, marca, tipo, presentacion,
+            stock_inicial, precio, imagen, ahora, ahora
+        ))
+
+        if stock_inicial > 0:
+            cursor.execute("""
+                INSERT INTO movimientos_stock
+                (producto_codigo, fecha, tipo, cantidad, stock_anterior,
+                 stock_nuevo, pedido_id, observacion)
+                VALUES (?, ?, 'REGULARIZACION', ?, 0, ?, NULL, ?)
+            """, (
+                codigo, ahora, stock_inicial, stock_inicial,
+                "Stock inicial al crear el producto"
+            ))
+
+        conn.commit()
+
+    except sqlite3.IntegrityError:
+        # Red de seguridad: la base también exige código único
+        conn.rollback()
+        raise ValueError(f"El código {codigo} ya existe. Usa otro código.")
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()
 
 
+# ======================================================
+# NOMBRES DE PRODUCTO YA USADOS (para sugerir al escribir)
+# ======================================================
+# El campo "producto" funciona como familia en el catálogo; sugerir
+# los nombres existentes evita crear familias duplicadas por typos.
+def obtener_nombres_producto():
 
+    conn = conectar()
+    cursor = conn.cursor()
 
+    cursor.execute("""
+        SELECT DISTINCT producto FROM productos
+        WHERE producto IS NOT NULL AND producto != ''
+        ORDER BY producto
+    """)
 
+    nombres = [fila["producto"] for fila in cursor.fetchall()]
+    conn.close()
+
+    return nombres

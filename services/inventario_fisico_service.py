@@ -4,6 +4,30 @@ from services.stock_service import ajustar_stock_manual
 
 
 # ======================================================
+# ¿CON QUÉ PRECIO SE VALORIZA LA DIFERENCIA DE INVENTARIO?
+# ======================================================
+# "venta"  -> usa productos.precio (precio de venta al público).
+#             Úsalo mientras no hayas registrado compras para
+#             TODO tu stock existente, porque el costo promedio
+#             todavía está distorsionado (mezcla productos nunca
+#             comprados por el sistema, que arrancan en costo 0,
+#             con los pocos que sí compraste).
+# "compra" -> usa productos.precio_compra (costo promedio
+#             ponderado, calculado automáticamente en cada
+#             compra que registras en el módulo de Compras).
+#             Cambia a esta opción cuando ya hayas registrado al
+#             menos una compra para cada producto de tu catálogo,
+#             para que la diferencia en soles refleje tu costo
+#             real y no tu precio de venta.
+#
+# Este valor solo afecta a los inventarios que crees DE AQUÍ EN
+# ADELANTE. Los inventarios ya creados quedan con el valor que
+# tenían congelado al momento de crearse (no se recalculan solos).
+# ======================================================
+VALORIZAR_DIFERENCIA_CON = "venta"  # cambiar a "compra" cuando corresponda
+
+
+# ======================================================
 # GENERAR NÚMERO DE INVENTARIO (INV-001, INV-002, ...)
 # ======================================================
 def generar_numero_inventario(cursor):
@@ -18,8 +42,11 @@ def generar_numero_inventario(cursor):
 # CREAR UN NUEVO INVENTARIO FÍSICO
 # ======================================================
 # Toma una "foto" del stock teórico actual de todos los
-# productos activos y arma el detalle vacío (stock_real
-# en NULL) para que se vaya llenando durante el conteo.
+# productos activos y arma el detalle vacío (stock_real en NULL)
+# para que se vaya llenando durante el conteo. También congela
+# el "costo_unitario" de referencia (venta o compra, según
+# VALORIZAR_DIFERENCIA_CON) que se usará para valorizar cualquier
+# diferencia que se detecte en este inventario.
 # ======================================================
 def crear_inventario(observacion="", usuario=None):
 
@@ -39,7 +66,8 @@ def crear_inventario(observacion="", usuario=None):
         inventario_id = cursor.lastrowid
 
         cursor.execute("""
-            SELECT codigo, producto, marca, tipo, presentacion, stock
+            SELECT codigo, producto, marca, tipo, presentacion, stock,
+                   precio, precio_compra
             FROM productos
             WHERE activo = 1
             ORDER BY codigo
@@ -48,18 +76,24 @@ def crear_inventario(observacion="", usuario=None):
         productos = cursor.fetchall()
 
         for p in productos:
+
+            if VALORIZAR_DIFERENCIA_CON == "compra":
+                valor_referencia = p["precio_compra"] or 0
+            else:
+                valor_referencia = p["precio"] or 0
+
             cursor.execute("""
                 INSERT INTO inventario_fisico_detalle
                 (inventario_id, producto_codigo, producto, marca, tipo,
-                 presentacion, stock_teorico, stock_real, diferencia)
-                VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL)
+                 presentacion, stock_teorico, stock_real, diferencia, costo_unitario)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?)
             """, (
                 # La columna "tipo" de esta tabla se usa solo como
-                # etiqueta de agrupación visual; ahora guarda el valor
-                # de "producto" (la familia real), no el campo "tipo"
+                # etiqueta de agrupación visual; guarda el valor de
+                # "producto" (la familia real), no el campo "tipo"
                 # de la tabla productos.
                 inventario_id, p["codigo"], p["producto"], p["marca"],
-                p["producto"], p["presentacion"], p["stock"]
+                p["producto"], p["presentacion"], p["stock"], valor_referencia
             ))
 
         conn.commit()
@@ -84,7 +118,7 @@ def guardar_conteo(inventario_id, producto_codigo, stock_real):
 
     try:
         cursor.execute("""
-            SELECT stock_teorico FROM inventario_fisico_detalle
+            SELECT stock_teorico, costo_unitario FROM inventario_fisico_detalle
             WHERE inventario_id = ? AND producto_codigo = ?
         """, (inventario_id, producto_codigo))
 
@@ -94,18 +128,26 @@ def guardar_conteo(inventario_id, producto_codigo, stock_real):
             raise ValueError("Ese producto no pertenece a este inventario")
 
         stock_teorico = row["stock_teorico"] or 0
+        costo_unitario = row["costo_unitario"] or 0
+
         diferencia = stock_real - stock_teorico
+        diferencia_valor = diferencia * costo_unitario
+
         fecha = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         cursor.execute("""
             UPDATE inventario_fisico_detalle
-            SET stock_real = ?, diferencia = ?, fecha_conteo = ?
+            SET stock_real = ?, diferencia = ?, diferencia_valor = ?, fecha_conteo = ?
             WHERE inventario_id = ? AND producto_codigo = ?
-        """, (stock_real, diferencia, fecha, inventario_id, producto_codigo))
+        """, (stock_real, diferencia, diferencia_valor, fecha, inventario_id, producto_codigo))
 
         conn.commit()
 
-        return {"stock_teorico": stock_teorico, "diferencia": diferencia}
+        return {
+            "stock_teorico": stock_teorico,
+            "diferencia": diferencia,
+            "diferencia_valor": diferencia_valor
+        }
 
     except Exception:
         conn.rollback()

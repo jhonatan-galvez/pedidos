@@ -1,0 +1,74 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | {{ compra.cabecera.numero }}{% endblock %}
+
+{% block page_title %}
+{{ compra.cabecera.numero }}
+{% endblock %}
+
+{% block content %}
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>🧾 {{ compra.cabecera.numero }}</h2>
+    </div>
+
+    <div class="summary-item">
+        <span>Proveedor</span>
+        <strong>{{ compra.cabecera.proveedor or "-" }}</strong>
+    </div>
+
+    <div class="summary-item">
+        <span>Fecha</span>
+        <strong>{{ compra.cabecera.fecha }}</strong>
+    </div>
+
+    <div class="summary-item">
+        <span>Observación</span>
+        <strong>{{ compra.cabecera.observacion or "-" }}</strong>
+    </div>
+
+    <div class="summary-item">
+        <span>Total</span>
+        <strong>S/ {{ "%.2f"|format(compra.cabecera.total) }}</strong>
+    </div>
+
+</div>
+
+<div class="panel">
+
+    <div class="panel-title">
+        <h2>Productos comprados</h2>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Marca</th>
+                <th>Cantidad</th>
+                <th>Precio unitario</th>
+                <th>Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for item in compra.detalle %}
+            <tr>
+                <td>{{ item.producto_codigo }}</td>
+                <td>{{ item.producto }}</td>
+                <td>{{ item.marca }}</td>
+                <td>{{ item.cantidad }}</td>
+                <td>S/ {{ "%.2f"|format(item.precio_unitario) }}</td>
+                <td>S/ {{ "%.2f"|format(item.subtotal) }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+</div>
+
+<a href="/admin/compras" class="detail-link">← Volver al historial</a>
+
+{% endblock %}

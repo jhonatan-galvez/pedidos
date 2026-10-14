@@ -7,16 +7,23 @@ from io import BytesIO
 
 from services.database_service import inicializar_database
 from services.database_service import conectar
-from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario
+from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario, buscar_por_codigo, crear_producto, obtener_nombres_producto
 from services.stock_service import ajustar_stock_manual, obtener_movimientos_producto, obtener_reporte_movimientos
 from services.inventario_fisico_service import (
     crear_inventario,
     guardar_conteo,
     listar_inventarios,
     obtener_inventario,
-    cerrar_inventario
+    cerrar_inventario,
+    VALORIZAR_DIFERENCIA_CON
 )
-from services.sync_service import sincronizar_productos
+from services.sync_service import sincronizar_productos, obtener_imagen_producto
+from services.compra_service import (
+    registrar_compra,
+    listar_compras,
+    obtener_compra,
+    obtener_margenes
+)
 from werkzeug.utils import secure_filename
 from config import UPLOAD_FOLDER, EXCEL_NAME
 from services.sync_log_service import (obtener_ultima_sincronizacion,
@@ -334,7 +341,15 @@ def admin_sincronizacion():
 @app.post("/admin/sincronizar")
 def ejecutar_sincronizacion():
 
-    resultado = sincronizar_productos()
+    datos = request.get_json(silent=True) or {}
+
+    actualizar_stock = bool(datos.get("actualizar_stock", False))
+    desactivar_faltantes = bool(datos.get("desactivar_faltantes", False))
+
+    resultado = sincronizar_productos(
+        actualizar_stock=actualizar_stock,
+        desactivar_faltantes=desactivar_faltantes
+    )
 
     return jsonify(resultado)
 
@@ -363,7 +378,10 @@ def upload_excel():
 
     archivo.save(ruta)
 
-    resultado = sincronizar_productos()
+    resultado = sincronizar_productos(
+        actualizar_stock=(request.form.get("actualizar_stock") == "true"),
+        desactivar_faltantes=(request.form.get("desactivar_faltantes") == "true")
+    )
 
     return jsonify({
         "ok": True,
@@ -517,6 +535,68 @@ def crear_pedido_route():
 
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/admin/productos/nuevo", methods=["GET", "POST"])
+@permiso_requerido("puede_crear")
+def nuevo_producto():
+
+    error = None
+    form = {}
+
+    if request.method == "POST":
+
+        form = {
+            "codigo": request.form.get("codigo", "").strip(),
+            "producto": request.form.get("producto", "").strip(),
+            "marca": request.form.get("marca", "").strip(),
+            "tipo": request.form.get("tipo", "").strip(),
+            "presentacion": request.form.get("presentacion", "").strip(),
+            "stock": request.form.get("stock", "").strip(),
+            "precio": request.form.get("precio", "").strip(),
+        }
+
+        try:
+
+            stock_inicial = int(form["stock"] or 0)
+            precio = float((form["precio"] or "0").replace(",", "."))
+
+        except ValueError:
+            error = "Stock y precio deben ser números."
+
+        if error is None:
+
+            try:
+
+                crear_producto(
+                    codigo=form["codigo"],
+                    producto=form["producto"],
+                    marca=form["marca"],
+                    tipo=form["tipo"],
+                    presentacion=form["presentacion"],
+                    stock_inicial=stock_inicial,
+                    precio=precio,
+                    # si ya existe una foto nombrada con este código, se asigna sola
+                    imagen=obtener_imagen_producto(form["codigo"])
+                )
+
+                flash(
+                    f"Producto {form['codigo']} - {form['producto']} creado "
+                    f"con stock inicial {stock_inicial}.",
+                    "success"
+                )
+
+                return redirect("/admin/productos")
+
+            except ValueError as e:
+                error = str(e)
+
+    return render_template(
+        "admin/nuevo_producto.html",
+        error=error,
+        form=form,
+        nombres=obtener_nombres_producto()
+    )
+
 
 @app.route("/admin/productos/editar/<int:id>", methods=["GET","POST"])
 def editar_producto(id):
@@ -1094,7 +1174,8 @@ def inventario_fisico_detalle(inventario_id):
 
     return render_template(
         "admin/inventario_fisico.html",
-        inventario=inventario
+        inventario=inventario,
+        valorizacion=VALORIZAR_DIFERENCIA_CON
     )
 
 
@@ -1129,6 +1210,110 @@ def inventario_fisico_cerrar(inventario_id):
         flash(str(e), "error")
 
     return redirect(f"/admin/inventario-fisico/{inventario_id}")
+
+
+# ======================================================
+# MÓDULO DE COMPRAS (costo y márgenes de ganancia)
+# ======================================================
+
+@app.route("/admin/compras")
+@admin_required
+def compras_lista():
+
+    compras = listar_compras()
+    productos = obtener_productos()
+
+    return render_template(
+        "admin/compras.html",
+        compras=compras,
+        productos=productos
+    )
+
+
+@app.post("/admin/compras/nueva")
+@admin_required
+def compras_nueva():
+
+    proveedor = request.form.get("proveedor", "")
+    observacion = request.form.get("observacion", "")
+
+    codigos = request.form.getlist("codigo[]")
+    cantidades = request.form.getlist("cantidad[]")
+    precios = request.form.getlist("precio_unitario[]")
+
+    items = []
+    for i in range(len(codigos)):
+        if codigos[i] and cantidades[i] and precios[i]:
+            items.append({
+                "codigo": codigos[i],
+                "cantidad": cantidades[i],
+                "precio_unitario": precios[i]
+            })
+
+    try:
+        resultado = registrar_compra(
+            proveedor=proveedor,
+            items=items,
+            observacion=observacion,
+            usuario=session.get("nombre_completo") or session.get("usuario_login")
+        )
+        flash(f"Compra {resultado['numero']} registrada por S/ {resultado['total']:.2f}. "
+              f"Stock y costo promedio actualizados.", "success")
+
+    except Exception as e:
+        flash(f"No se pudo registrar la compra: {e}", "error")
+
+    return redirect("/admin/compras")
+
+
+@app.route("/admin/compras/<int:compra_id>")
+@admin_required
+def compras_detalle(compra_id):
+
+    compra = obtener_compra(compra_id)
+
+    if compra is None:
+        return redirect("/admin/compras")
+
+    return render_template(
+        "admin/compra_detalle.html",
+        compra=compra
+    )
+
+
+@app.route("/admin/margenes")
+@admin_required
+def margenes():
+
+    productos = obtener_margenes()
+
+    return render_template(
+        "admin/margenes.html",
+        productos=productos
+    )
+
+
+@app.route("/admin/productos/buscar/<codigo>")
+def productos_buscar_codigo(codigo):
+
+    producto = buscar_por_codigo(codigo)
+
+    if producto is None:
+        return jsonify({"ok": False}), 404
+
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT precio_compra FROM productos WHERE codigo = ?", (codigo,))
+    row = cursor.fetchone()
+    conn.close()
+
+    return jsonify({
+        "ok": True,
+        "producto": producto["producto"],
+        "marca": producto["marca"],
+        "stock": producto["stock"],
+        "precio_compra": (row["precio_compra"] if row and row["precio_compra"] else 0)
+    })
 
 
 # ======================================================

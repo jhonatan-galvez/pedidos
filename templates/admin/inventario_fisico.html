@@ -8,6 +8,17 @@
 
 {% block content %}
 
+{% if valorizacion == "venta" %}
+<div style="background:#fff7ed; border-left:4px solid #f59e0b; padding:10px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; color:#92400e;">
+    ⚠️ La columna "Diferencia S/" está valorizada con el <strong>precio de venta</strong>
+    temporalmente.
+</div>
+{% else %}
+<div style="background:#eff6ff; border-left:4px solid #2563eb; padding:10px 16px; border-radius:8px; margin-bottom:16px; font-size:13px; color:#1e3a8a;">
+    ℹ️ La columna "Diferencia S/" está valorizada con el <strong>costo real</strong> (promedio ponderado de compras).
+</div>
+{% endif %}
+
 <div class="panel">
 
     <div class="panel-title">
@@ -20,8 +31,10 @@
         </h2>
     </div>
 
-    <p style="color:#64748b; font-size:14px;">
+    <p style="color:#64748b; font-size:13px;">
         {{ inventario.cabecera.observacion or "Sin observación." }}
+        Escribe el stock real contado en cada producto; se guarda automáticamente.
+        La columna "Diferencia" es real − teórico (negativo = falta, positivo = sobra).
     </p>
 
     {% if inventario.cabecera.estado != 'CERRADO' %}
@@ -54,6 +67,7 @@
                 <th>Stock teórico</th>
                 <th>Stock real</th>
                 <th>Diferencia</th>
+                <th>Diferencia S/</th>
             </tr>
         </thead>
         <tbody>
@@ -79,6 +93,12 @@
                     color: {{ '#b91c1c' if item.diferencia and item.diferencia < 0
                               else ('#166534' if item.diferencia and item.diferencia > 0 else '#64748b') }};">
                     {{ item.diferencia if item.diferencia is not none else '-' }}
+                </td>
+                <td class="celda-diferencia-valor"
+                    style="font-weight:600;
+                    color: {{ '#b91c1c' if item.diferencia_valor and item.diferencia_valor < 0
+                              else ('#166534' if item.diferencia_valor and item.diferencia_valor > 0 else '#64748b') }};">
+                    {{ "S/ %.2f"|format(item.diferencia_valor) if item.diferencia_valor is not none else '-' }}
                 </td>
             </tr>
         {% endfor %}
@@ -122,11 +142,18 @@ document.querySelectorAll(".input-stock-real").forEach(function (input) {
                 }
 
                 const fila = input.closest("tr");
+
                 const celdaDiferencia = fila.querySelector(".celda-diferencia");
                 celdaDiferencia.textContent = data.diferencia;
                 celdaDiferencia.style.color = data.diferencia < 0
                     ? "#b91c1c"
                     : (data.diferencia > 0 ? "#166534" : "#64748b");
+
+                const celdaValor = fila.querySelector(".celda-diferencia-valor");
+                celdaValor.textContent = "S/ " + data.diferencia_valor.toFixed(2);
+                celdaValor.style.color = data.diferencia_valor < 0
+                    ? "#b91c1c"
+                    : (data.diferencia_valor > 0 ? "#166534" : "#64748b");
             })
             .catch(() => alert("Error de conexión al guardar el conteo."));
 
