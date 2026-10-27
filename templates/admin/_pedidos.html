@@ -1,0 +1,249 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Doña Flori | Pedidos{% endblock %}
+
+{% block page_title %}
+Gestión de Pedidos
+{% endblock %}
+
+{% block content %}
+
+<!-- ================= FILTROS ================= -->
+
+<div class="panel">
+
+    <form method="GET" action="/admin/pedidos" class="filters">
+
+        <input
+            type="text"
+            name="buscar"
+            class="input"
+            placeholder="🔍 Buscar pedido, cliente o teléfono..."
+            value="{{ buscar or '' }}">
+
+        <select name="estado" class="input">
+
+            <option value="">Todos los estados</option>
+
+            <option value="PENDIENTE" {% if estado=="PENDIENTE" %}selected{% endif %}>
+                Pendiente
+            </option>
+
+            <option value="PREPARANDO" {% if estado=="PREPARANDO" %}selected{% endif %}>
+                Preparando
+            </option>
+
+            <option value="EN_CAMINO" {% if estado=="EN_CAMINO" %}selected{% endif %}>
+                En camino
+            </option>
+
+            <option value="ENTREGADO" {% if estado=="ENTREGADO" %}selected{% endif %}>
+                Entregado
+            </option>
+
+        </select>
+
+        <input
+            type="date"
+            name="desde"
+            class="input"
+            value="{{ desde or '' }}">
+
+        <input
+            type="date"
+            name="hasta"
+            class="input"
+            value="{{ hasta or '' }}">
+
+        <button class="btn-primary" type="submit">
+
+            Buscar
+
+        </button>
+
+        <a href="/admin/pedidos" class="btn-secondary">
+
+            Limpiar
+
+        </a>
+
+    </form>
+
+</div>
+
+{% if pedidos|length == 0 %}
+
+<div class="panel">
+
+    <h3>No se encontraron pedidos.</h3>
+
+</div>
+
+{% else %}
+
+<div class="orders-list">
+
+{% for pedido in pedidos %}
+
+<div class="order-card
+
+{% if pedido.estado=='PENDIENTE' %}
+pending
+{% elif pedido.estado=='PREPARANDO' %}
+preparing
+{% elif pedido.estado=='EN_CAMINO' %}
+shipping
+{% else %}
+delivered
+{% endif %}
+
+">
+
+    <!-- CABECERA -->
+
+    <div class="order-header">
+
+        <div>
+
+            <h2>
+
+                {{ pedido.numero }}
+
+            </h2>
+
+            <span class="order-date">
+
+                {{ pedido.fecha }}
+
+            </span>
+
+        </div>
+
+        <div>
+
+            {% if pedido.estado=="PENDIENTE" %}
+
+                <span class="badge badge-yellow">
+
+                    Pendiente
+
+                </span>
+
+            {% elif pedido.estado=="PREPARANDO" %}
+
+                <span class="badge badge-blue">
+
+                    Preparando
+
+                </span>
+
+            {% elif pedido.estado=="EN_CAMINO" %}
+
+                <span class="badge badge-green">
+
+                    En camino
+
+                </span>
+
+            {% else %}
+
+                <span class="badge badge-gray">
+
+                    Entregado
+
+                </span>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- DATOS -->
+
+    <div class="order-info">
+
+        <div>
+
+            <strong>Cliente</strong>
+
+            <p>{{ pedido.cliente }}</p>
+
+        </div>
+
+        <div>
+
+            <strong>Teléfono</strong>
+
+            <p>{{ pedido.telefono }}</p>
+
+        </div>
+
+        <div>
+
+            <strong>Pago</strong>
+
+            <p>
+                {% if pedido.tipo_pago == "Yape" %} {% elif pedido.tipo_pago == "Efectivo" %} {% else %} {% endif %}
+                {{ pedido.tipo_pago }}
+            </p>
+
+        </div>
+
+        <div>
+
+            <strong>Total</strong>
+
+            <p class="order-total">
+
+                S/ {{ "%.2f"|format(pedido.total) }}
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <hr>
+
+    <!-- ACCIONES -->
+
+    <div class="order-actions">
+
+        <span class="badge-active">
+            {{ pedido.estado }}
+        </span>
+
+        {% if pedido.estado != "CANCELADO" %}
+        <form method="POST" action="/admin/pedido/{{ pedido.id }}/pagado" style="display:inline-flex; align-items:center; gap:6px;">
+            <input type="hidden" name="volver" value="/admin/pedidos">
+            <input type="hidden" name="pagado" value="{{ '0' if pedido.pagado else '1' }}">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;">
+                <input type="checkbox" {% if pedido.pagado %}checked{% endif %}
+                    onchange="this.form.submit()">
+                Cancelado (pagado)
+            </label>
+        </form>
+        {% endif %}
+
+        <a
+            href="/admin/pedido/{{ pedido.id }}"
+            class="detail-link">
+
+            Ver detalle / Cambiar estado →
+
+        </a>
+
+    </div>
+
+</div>
+
+{% endfor %}
+
+</div>
+
+{% endif %}
+
+{% endblock %}

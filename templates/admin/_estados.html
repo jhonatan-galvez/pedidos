@@ -1,0 +1,39 @@
+{# ==========================================================
+   Etiquetas de ESTADO DE PEDIDO (una sola definición compartida)
+   Usadas en: pedidos.html y dashboard.html
+
+   Los valores deben coincidir EXACTO con services/estados.py
+   (ojo: "EN CAMINO" lleva espacio, no guion bajo).
+   Un estado desconocido se muestra tal cual en gris: nunca se
+   disfraza de "Entregado".
+
+   El rojo de "Cancelado" va también en línea (style=) a propósito:
+   así se ve bien aunque el CSS de .badge-red todavía no esté cargado.
+   ========================================================== #}
+
+{% macro badge_estado(estado) -%}
+{%- if estado == "PENDIENTE" -%}
+<span class="badge badge-yellow">Pendiente</span>
+{%- elif estado == "PREPARANDO" -%}
+<span class="badge badge-blue">Preparando</span>
+{%- elif estado == "LISTO" -%}
+<span class="badge badge-blue">Listo</span>
+{%- elif estado == "EN CAMINO" -%}
+<span class="badge badge-green">En camino</span>
+{%- elif estado == "ENTREGADO" -%}
+<span class="badge badge-gray">Entregado</span>
+{%- elif estado == "CANCELADO" -%}
+<span class="badge badge-red" style="background:#dc2626; color:#fff;">Cancelado</span>
+{%- else -%}
+<span class="badge badge-gray">{{ estado }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro clase_tarjeta(estado) -%}
+{%- if estado == "PENDIENTE" -%}pending
+{%- elif estado == "PREPARANDO" or estado == "LISTO" -%}preparing
+{%- elif estado == "EN CAMINO" -%}shipping
+{%- elif estado == "CANCELADO" -%}cancelled
+{%- else -%}delivered
+{%- endif -%}
+{%- endmacro %}

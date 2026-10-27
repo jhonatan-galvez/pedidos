@@ -25,7 +25,7 @@
 
         {% for p in productos %}
 
-        <div class="product-card">
+        <div class="product-card{% if p.activo != 1 %} inactivo{% endif %}">
             <div class="product-image">
 
                 {% if p.imagen %}
@@ -100,6 +100,28 @@
                     Stock
                 </a>
 
+                {% if p.stock and p.stock != 0 %}
+                <form method="POST" action="/admin/productos/{{ p.id }}/stock-cero" style="display:inline;"
+                      onsubmit="return confirm('¿Poner el stock de este producto en 0?\n\nStock actual: {{ p.stock }}\nQuedará registrado en el historial de movimientos.');">
+                    <button type="submit" class="btn-secondary">Stock a 0</button>
+                </form>
+                {% endif %}
+
+                {% if p.activo == 1 %}
+                <form method="POST" action="/admin/productos/{{ p.id }}/estado" style="display:inline;"
+                      onsubmit="return confirmarCambioEstado(this, {{ p.stock or 0 }});">
+                    <input type="hidden" name="activo" value="0">
+                    <input type="hidden" name="stock_cero" value="0">
+                    <button type="submit" class="btn-secondary peligro">Desactivar</button>
+                </form>
+                {% else %}
+                <form method="POST" action="/admin/productos/{{ p.id }}/estado" style="display:inline;"
+                      onsubmit="return confirmarCambioEstado(this, {{ p.stock or 0 }});">
+                    <input type="hidden" name="activo" value="1">
+                    <button type="submit" class="btn-secondary activar">Activar</button>
+                </form>
+                {% endif %}
+
             </div>
 
         </div>
@@ -109,5 +131,27 @@
     </div>
 
 </div>
+
+
+<script>
+// Confirma antes de activar/desactivar. Al desactivar un producto que tiene
+// stock, pregunta además si se quiere dejar el stock en 0.
+function confirmarCambioEstado(form, stock) {
+
+    if (form.activo.value === "1") {
+        return confirm("¿Activar este producto?\n\nVolverá a verse en el catálogo.");
+    }
+
+    if (!confirm("¿Desactivar este producto?\n\nDejará de verse en el catálogo y en las alertas de stock. No se borra: puedes activarlo de nuevo cuando quieras.")) {
+        return false;
+    }
+
+    if (stock > 0 && confirm("Este producto tiene stock " + stock + ".\n\n¿Poner también el stock en 0?\n\nAceptar = sí, poner en 0\nCancelar = no, dejar el stock como está")) {
+        form.stock_cero.value = "1";
+    }
+
+    return true;
+}
+</script>
 
 {% endblock %}

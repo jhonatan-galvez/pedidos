@@ -1,4 +1,5 @@
 {% extends "admin/base_admin.html" %}
+{% from "admin/_estados.html" import badge_estado %}
 
 {% block title %}Doña Flori | Dashboard{% endblock %}
 
@@ -50,7 +51,7 @@ Centro de Control
         </div>
 
         <div class="card-value">
-            {{ data.estados.get('EN_CAMINO',0) }}
+            {{ data.estados.get('EN CAMINO',0) }}
         </div>
 
         <small>Reparto</small>
@@ -275,39 +276,7 @@ Centro de Control
 
                 <td>
 
-                    {% if p.estado=="PENDIENTE" %}
-
-                        <span class="badge badge-yellow">
-
-                            Pendiente
-
-                        </span>
-
-                    {% elif p.estado=="PREPARANDO" %}
-
-                        <span class="badge badge-blue">
-
-                            Preparando
-
-                        </span>
-
-                    {% elif p.estado=="EN_CAMINO" %}
-
-                        <span class="badge badge-green">
-
-                            En Camino
-
-                        </span>
-
-                    {% else %}
-
-                        <span class="badge badge-gray">
-
-                            Entregado
-
-                        </span>
-
-                    {% endif %}
+                    {{ badge_estado(p.estado) }}
 
                 </td>
 

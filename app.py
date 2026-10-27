@@ -7,7 +7,7 @@ from io import BytesIO
 
 from services.database_service import inicializar_database
 from services.database_service import conectar
-from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario, buscar_por_codigo, crear_producto, obtener_nombres_producto
+from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario, buscar_por_codigo, crear_producto, obtener_nombres_producto, cambiar_estado_producto
 from services.stock_service import ajustar_stock_manual, obtener_movimientos_producto, obtener_reporte_movimientos
 from services.inventario_fisico_service import (
     crear_inventario,
@@ -596,6 +596,96 @@ def nuevo_producto():
         form=form,
         nombres=obtener_nombres_producto()
     )
+
+
+@app.post("/admin/productos/<int:id>/estado")
+@permiso_requerido("puede_editar")
+def producto_cambiar_activo(id):
+
+    # "1" = activar, "0" = desactivar (cualquier otro valor se rechaza)
+    valor = request.form.get("activo")
+
+    if valor not in ("0", "1"):
+        flash("Solicitud no válida.", "error")
+        return redirect("/admin/productos")
+
+    activar = valor == "1"
+    poner_stock_cero = request.form.get("stock_cero") == "1" and not activar
+
+    try:
+
+        producto = cambiar_estado_producto(id, activar)
+
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect("/admin/productos")
+
+    nombre = f"{producto['codigo']} - {producto['producto']}"
+
+    if activar:
+        flash(f"Producto {nombre} activado: vuelve a verse en el catálogo.", "success")
+        return redirect("/admin/productos")
+
+    mensaje = f"Producto {nombre} desactivado: ya no se ve en el catálogo."
+
+    if poner_stock_cero and producto["stock"] != 0:
+
+        try:
+
+            ajustar_stock_manual(
+                producto["codigo"],
+                "REGULARIZACION",
+                0,
+                "Stock puesto en 0 al desactivar el producto"
+            )
+            mensaje += f" Su stock pasó de {producto['stock']} a 0."
+
+        except ValueError as e:
+            flash(f"{mensaje} Pero no se pudo poner el stock en 0: {e}", "error")
+            return redirect("/admin/productos")
+
+    flash(mensaje, "success")
+    return redirect("/admin/productos")
+
+
+@app.post("/admin/productos/<int:id>/stock-cero")
+@permiso_requerido("puede_editar")
+def producto_poner_stock_cero(id):
+
+    producto = next(
+        (p for p in obtener_admproductos() if p["id"] == id),
+        None
+    )
+
+    if producto is None:
+        flash("Producto no encontrado.", "error")
+        return redirect("/admin/productos")
+
+    nombre = f"{producto['codigo']} - {producto['producto']}"
+
+    if (producto["stock"] or 0) == 0:
+        flash(f"{nombre} ya estaba en stock 0; no se cambió nada.", "success")
+        return redirect("/admin/productos")
+
+    try:
+
+        ajustar_stock_manual(
+            producto["codigo"],
+            "REGULARIZACION",
+            0,
+            "Stock puesto en 0 desde Productos"
+        )
+
+    except ValueError as e:
+        flash(str(e), "error")
+        return redirect("/admin/productos")
+
+    flash(
+        f"{nombre}: stock de {producto['stock']} a 0. "
+        "En el catálogo se muestra como \"Sin stock\".",
+        "success"
+    )
+    return redirect("/admin/productos")
 
 
 @app.route("/admin/productos/editar/<int:id>", methods=["GET","POST"])

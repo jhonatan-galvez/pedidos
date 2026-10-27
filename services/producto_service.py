@@ -367,3 +367,56 @@ def obtener_nombres_producto():
     conn.close()
 
     return nombres
+
+
+# ======================================================
+# ACTIVAR / DESACTIVAR UN PRODUCTO
+# ======================================================
+# Un producto desactivado NO se borra: deja de verse en el catálogo
+# público, en las búsquedas y en las alertas/reportes de stock, pero
+# conserva su historial (ventas, compras, movimientos).
+# Devuelve el producto afectado (codigo, producto, stock) para armar
+# el mensaje al usuario.
+# ======================================================
+def cambiar_estado_producto(producto_id, activo):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    try:
+
+        cursor.execute("""
+            SELECT codigo, producto, stock
+            FROM productos
+            WHERE id = ?
+        """, (producto_id,))
+
+        fila = cursor.fetchone()
+
+        if fila is None:
+            raise ValueError("Producto no encontrado.")
+
+        cursor.execute("""
+            UPDATE productos
+            SET activo = ?, fecha_actualizacion = ?
+            WHERE id = ?
+        """, (
+            1 if activo else 0,
+            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            producto_id
+        ))
+
+        conn.commit()
+
+        return {
+            "codigo": fila["codigo"],
+            "producto": fila["producto"],
+            "stock": fila["stock"] or 0
+        }
+
+    except Exception:
+        conn.rollback()
+        raise
+
+    finally:
+        conn.close()

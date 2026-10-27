@@ -1248,3 +1248,37 @@ table tbody tr:hover{
     margin-top:30px;
 
 }
+
+/* === AGREGAR AL FINAL de static/css/admin.css (no reemplazar el archivo) === */
+
+/* Pedido cancelado: borde rojo en la tarjeta */
+.cancelled{
+    border-left-color:#dc2626;
+}
+
+/* Productos: botones activar / desactivar / stock a 0 */
+button.btn-secondary{
+    border:none;
+    cursor:pointer;
+}
+
+.btn-secondary.peligro{
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.btn-secondary.activar{
+    background:#dcfce7;
+    color:#166534;
+}
+
+/* con varios botones, que pasen a otra línea en vez de desbordar */
+.product-actions{
+    flex-wrap:wrap;
+    gap:6px;
+}
+
+/* producto desactivado: tarjeta atenuada */
+.product-card.inactivo{
+    opacity:0.6;
+}

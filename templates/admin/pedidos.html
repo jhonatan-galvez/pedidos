@@ -1,4 +1,5 @@
 {% extends "admin/base_admin.html" %}
+{% from "admin/_estados.html" import badge_estado, clase_tarjeta %}
 
 {% block title %}Doña Flori | Pedidos{% endblock %}
 
@@ -33,12 +34,20 @@ Gestión de Pedidos
                 Preparando
             </option>
 
-            <option value="EN_CAMINO" {% if estado=="EN_CAMINO" %}selected{% endif %}>
+            <option value="LISTO" {% if estado=="LISTO" %}selected{% endif %}>
+                Listo
+            </option>
+
+            <option value="EN CAMINO" {% if estado=="EN CAMINO" %}selected{% endif %}>
                 En camino
             </option>
 
             <option value="ENTREGADO" {% if estado=="ENTREGADO" %}selected{% endif %}>
                 Entregado
+            </option>
+
+            <option value="CANCELADO" {% if estado=="CANCELADO" %}selected{% endif %}>
+                Cancelado
             </option>
 
         </select>
@@ -85,19 +94,7 @@ Gestión de Pedidos
 
 {% for pedido in pedidos %}
 
-<div class="order-card
-
-{% if pedido.estado=='PENDIENTE' %}
-pending
-{% elif pedido.estado=='PREPARANDO' %}
-preparing
-{% elif pedido.estado=='EN_CAMINO' %}
-shipping
-{% else %}
-delivered
-{% endif %}
-
-">
+<div class="order-card {{ clase_tarjeta(pedido.estado) }}">
 
     <!-- CABECERA -->
 
@@ -121,39 +118,7 @@ delivered
 
         <div>
 
-            {% if pedido.estado=="PENDIENTE" %}
-
-                <span class="badge badge-yellow">
-
-                    Pendiente
-
-                </span>
-
-            {% elif pedido.estado=="PREPARANDO" %}
-
-                <span class="badge badge-blue">
-
-                    Preparando
-
-                </span>
-
-            {% elif pedido.estado=="EN_CAMINO" %}
-
-                <span class="badge badge-green">
-
-                    En camino
-
-                </span>
-
-            {% else %}
-
-                <span class="badge badge-gray">
-
-                    Entregado
-
-                </span>
-
-            {% endif %}
+            {{ badge_estado(pedido.estado) }}
 
         </div>
 

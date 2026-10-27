@@ -1,0 +1,1880 @@
+from services.producto_service import actualizar_imagen_producto
+from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+from openpyxl import Workbook
+from openpyxl.styles import Font
+from io import BytesIO
+
+from services.database_service import inicializar_database
+from services.database_service import conectar
+from services.producto_service import obtener_productos, obtener_admproductos, obtener_reporte_inventario, buscar_por_codigo, crear_producto, obtener_nombres_producto
+from services.stock_service import ajustar_stock_manual, obtener_movimientos_producto, obtener_reporte_movimientos
+from services.inventario_fisico_service import (
+    crear_inventario,
+    guardar_conteo,
+    listar_inventarios,
+    obtener_inventario,
+    cerrar_inventario,
+    VALORIZAR_DIFERENCIA_CON
+)
+from services.sync_service import sincronizar_productos, obtener_imagen_producto
+from services.compra_service import (
+    registrar_compra,
+    listar_compras,
+    obtener_compra,
+    obtener_margenes
+)
+from werkzeug.utils import secure_filename
+from config import UPLOAD_FOLDER, EXCEL_NAME
+from services.sync_log_service import (obtener_ultima_sincronizacion,
+    obtener_historial)
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
+import os
+import zipfile
+from flask import send_file
+from services.cloudinary_service import subir_imagen
+
+from services.ticket_service import generar_ticket, Ticket
+from routes.ticket_routes import ticket_bp
+from services.impresora_service import imprimir_ticket
+from services.notificacion_service import iniciar_notificacion
+import logging
+from services.whatsapp_service import enviar_confirmacion_pedido
+from services.producto_service import actualizar_producto, obtener_admproductos
+from services.cliente_service import obtener_clientes, actualizar_cliente_admin, obtener_cliente_por_id
+import services.caja_service as caja_service
+from services.pedido_service import (
+    crear_pedido,
+    obtener_pedidos,
+    obtener_pedido_completo,
+    actualizar_estado_pedido,
+    obtener_dashboard,
+    actualizar_pedido,
+    obtener_pedidos_cliente,
+    obtener_reporte_ventas,
+    obtener_ventas_por_producto
+)
+
+
+
+logger = logging.getLogger(__name__)
+
+
+
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+PRODUCT_IMAGE_FOLDER = os.path.join(
+    BASE_DIR,
+    "static",
+    "img",
+    "productos"
+)
+
+load_dotenv()
+
+app = Flask(__name__)
+app.secret_key = os.environ.get("SECRET_KEY", "cambia-esta-clave-en-produccion")
+app.register_blueprint(ticket_bp)
+inicializar_database()
+
+from services.auth_service import (
+    usuario_actual, iniciar_sesion, cerrar_sesion,
+    login_required, admin_required, permiso_requerido
+)
+from services import usuario_service, perfil_service
+
+
+@app.before_request
+def proteger_admin():
+
+    ruta = request.path
+
+    rutas_publicas_admin = (
+        "/login", "/logout", "/login/recuperar", "/static"
+    )
+
+    if ruta.startswith("/admin") and not ruta.startswith(rutas_publicas_admin):
+
+        if "usuario_id" not in session:
+            return redirect(url_for("login", next=ruta))
+
+
+@app.context_processor
+def inyectar_usuario():
+    return {"usuario_actual": usuario_actual()}
+
+
+####################################
+# SITIO PUBLICO - CLIENTE
+####################################
+@app.get("/")
+def index():
+
+    carpeta = os.path.join(
+        app.static_folder,
+        "img",
+        "banners"
+    )
+
+    banners = []
+
+    if os.path.exists(carpeta):
+
+        banners = sorted([
+
+            archivo
+
+            for archivo in os.listdir(carpeta)
+
+            if archivo.lower().endswith(
+                (".jpg", ".jpeg", ".png", ".webp")
+            )
+
+        ])
+
+    return render_template(
+
+        "index.html",
+
+        banners=banners
+
+    )
+
+
+@app.route("/catalogo")
+def catalogo():
+    productos = obtener_productos()
+
+    # Se ordena por código, que es el orden por defecto que ve
+    # el cliente. El agrupado por familia (columna "producto")
+    # se hace en el propio template mediante las pestañas JS.
+    productos = sorted(productos, key=lambda p: (p["codigo"] or ""))
+
+    # Familias (columna "producto") con su cantidad de productos,
+    # para mostrar el contador en cada pestaña y ordenarlas por
+    # relevancia (las que tienen más productos van primero).
+    conteo_familias = {}
+    for p in productos:
+        nombre = p["producto"]
+        if nombre:
+            conteo_familias[nombre] = conteo_familias.get(nombre, 0) + 1
+
+    familias = sorted(
+        conteo_familias.items(),
+        key=lambda item: (-item[1], item[0])
+    )
+    familias = [{"nombre": nombre, "cantidad": cantidad} for nombre, cantidad in familias]
+
+    return render_template(
+        "catalogo.html",
+        productos=productos,
+        familias=familias,
+        total_productos=len(productos)
+    )
+
+@app.route("/checkout")
+def checkout():
+    return render_template("checkout.html")
+
+
+@app.route("/admin/productos/imagen/<int:id>", methods=["GET","POST"])
+def imagen_producto(id):
+
+    if request.method == "POST":
+
+        archivo = request.files.get("imagen")
+
+        if archivo:
+
+            url_imagen = subir_imagen(archivo)
+
+            actualizar_imagen_producto(
+                id,
+                url_imagen
+            )
+
+            return redirect("/admin/productos")
+
+
+    return render_template(
+        "admin/imagen_producto.html",
+        id=id
+    )
+
+@app.route("/admin/backup-imagenes")
+def backup_imagenes():
+
+    carpeta = PRODUCT_IMAGE_FOLDER
+
+    if not os.path.exists(carpeta):
+        return "La carpeta de imágenes no existe."
+
+    zip_path = os.path.join(BASE_DIR, "backup_imagenes.zip")
+
+    with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zipf:
+
+        for archivo in os.listdir(carpeta):
+
+            ruta = os.path.join(carpeta, archivo)
+
+            if os.path.isfile(ruta):
+
+                zipf.write(
+                    ruta,
+                    arcname=archivo
+                )
+
+    return send_file(
+        zip_path,
+        as_attachment=True,
+        download_name="backup_imagenes.zip"
+    )
+
+'''@app.route("/pedidos", methods=["GET"])
+def listar_pedidos():
+    return jsonify(get_pedidos())
+
+@app.route("/pedido/<int:id>", methods=["GET"])
+def ver_pedido(id):
+    return jsonify(get_pedido_completo(id))'''
+
+####################################
+# SITIO ADM - ADMINISTRADOR
+####################################
+@app.route("/admin")
+def admin():
+    return redirect(url_for("dashboard"))
+
+@app.route("/admin/pedidos")
+def admin_pedidos():
+
+    buscar = request.args.get("buscar")
+    estado = request.args.get("estado")
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    pedidos = obtener_pedidos(
+        buscar=buscar,
+        estado=estado,
+        desde=desde,
+        hasta=hasta
+    )
+
+    return render_template(
+        "admin/pedidos.html",
+        pedidos=pedidos,
+        buscar=buscar,
+        estado=estado,
+        desde=desde,
+        hasta=hasta
+    )
+
+@app.route("/admin/pedido/<int:pedido_id>")
+def admin_detalle_pedido(pedido_id):
+
+    pedido = obtener_pedido_completo(pedido_id)
+
+    return render_template(
+        "admin/detalle_pedido.html",
+        pedido=pedido
+    )
+
+@app.route("/admin/pedido/<int:pedido_id>/estado", methods=["POST"])
+@permiso_requerido("puede_editar")
+def cambiar_estado(pedido_id):
+
+    estado = request.form.get("estado")
+
+    actualizar_estado_pedido(pedido_id, estado)
+
+    return redirect("/admin/pedidos")
+
+@app.route("/admin/pedido/<int:pedido_id>/pagado", methods=["POST"])
+@permiso_requerido("puede_editar")
+def marcar_pagado(pedido_id):
+
+    pagado = request.form.get("pagado") == "1"
+
+    try:
+        caja_service.marcar_pagado(pedido_id, pagado)
+    except ValueError:
+        pass  # ej: intento de marcar pagado un CANCELADO; se ignora
+
+    volver = request.form.get("volver") or "/admin/pedidos"
+
+    return redirect(volver)
+
+@app.route("/admin/dashboard")
+def dashboard():
+
+    data = obtener_dashboard()
+
+    return render_template(
+        "admin/dashboard.html",
+        data=data
+    )
+
+@app.route("/admin/productos")
+def admin_productos():
+
+    productos = obtener_admproductos()
+
+    return render_template(
+        "admin/productos.html",
+        productos=productos
+    )
+
+@app.route("/admin/sincronizacion")
+def admin_sincronizacion():
+
+    return render_template(
+
+        "admin/sincronizacion.html",
+
+        ultima=obtener_ultima_sincronizacion(),
+
+        historial=obtener_historial()
+
+    )
+
+@app.post("/admin/sincronizar")
+def ejecutar_sincronizacion():
+
+    datos = request.get_json(silent=True) or {}
+
+    actualizar_stock = bool(datos.get("actualizar_stock", False))
+    desactivar_faltantes = bool(datos.get("desactivar_faltantes", False))
+
+    resultado = sincronizar_productos(
+        actualizar_stock=actualizar_stock,
+        desactivar_faltantes=desactivar_faltantes
+    )
+
+    return jsonify(resultado)
+
+@app.post("/admin/upload_excel")
+def upload_excel():
+
+    archivo = request.files.get("archivo")
+
+    if archivo is None or archivo.filename == "":
+        return jsonify({
+            "ok": False,
+            "mensaje": "No se seleccionó ningún archivo."
+        }), 400
+
+    if not archivo.filename.lower().endswith(".xlsx"):
+        return jsonify({
+            "ok": False,
+            "mensaje": "Solo se permiten archivos .xlsx"
+        }), 400
+
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    nombre = secure_filename(EXCEL_NAME)
+
+    ruta = os.path.join(UPLOAD_FOLDER, nombre)
+
+    archivo.save(ruta)
+
+    resultado = sincronizar_productos(
+        actualizar_stock=(request.form.get("actualizar_stock") == "true"),
+        desactivar_faltantes=(request.form.get("desactivar_faltantes") == "true")
+    )
+
+    return jsonify({
+        "ok": True,
+        "mensaje": "Catálogo actualizado correctamente.",
+        "resultado": resultado
+    })
+
+
+#if __name__ == "__main__":
+#    inicializar_database()
+#    app.run(debug=True)
+
+@app.post("/api/ticket/<int:pedido_id>")
+def api_generar_ticket(pedido_id):
+    """Genera un ticket en objeto para usarlo internamente"""
+    try:
+        ticket = generar_ticket(pedido_id)
+        
+        if ticket is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        return jsonify({
+            "ok": True,
+            "numero_pedido": ticket.numero_pedido,
+            "contenido": ticket.generar_ticket_pos()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generando ticket: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+
+@app.post("/admin/ticket/<int:pedido_id>/imprimir")
+def imprimir_ticket_route(pedido_id):
+    """Imprime el ticket en la Epson T20II"""
+    try:
+        ticket = generar_ticket(pedido_id)
+        
+        if ticket is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        exito = imprimir_ticket(ticket)
+        
+        if exito:
+            return jsonify({
+                "ok": True,
+                "mensaje": f"Ticket {ticket.numero_pedido} impreso"
+            })
+        else:
+            return jsonify({
+                "ok": False,
+                "error": "No se pudo imprimir el ticket (impresora no disponible)"
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"Error imprimiendo: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+@app.post("/admin/ticket/<int:pedido_id>/whatsapp")
+def enviar_ticket_whatsapp(pedido_id):
+    """Envía el ticket por WhatsApp desde admin"""
+    try:
+        pedido = obtener_pedido_completo(pedido_id)
+        
+        if pedido is None:
+            return jsonify({
+                "ok": False,
+                "error": "Pedido no encontrado"
+            }), 404
+        
+        ticket = generar_ticket(pedido_id)
+        numero = pedido["cliente"]["telefono"]
+        
+        # Construir items
+        items_detalle = [
+            f"{item['producto']} x {item['cantidad']}"
+            for item in pedido["detalle"]
+        ]
+        
+        # ✅ USAR CONFIRMACIÓN (no ticket)
+        try:
+            enviar_confirmacion_pedido(
+                numero,
+                pedido["numero"],
+                pedido["total"],
+                items_count=len(pedido["detalle"]),
+                items_detalle=items_detalle,
+                tipo_pago=pedido.get("tipo_pago", "No especificado")
+            )
+            return jsonify({
+                "ok": True,
+                "mensaje": f"Confirmación enviada a {numero}"
+            })
+        except Exception as e:
+            return jsonify({
+                "ok": False,
+                "error": f"No se pudo enviar: {str(e)}"
+            }), 500
+        
+    except Exception as e:
+        logger.error(f"Error enviando WhatsApp: {str(e)}")
+        return jsonify({
+            "ok": False,
+            "error": str(e)
+        }), 500
+
+@app.route("/admin/ticket/<int:pedido_id>")
+def ticket_preview(pedido_id):
+
+    pedido = obtener_pedido_completo(pedido_id)
+
+    ticket = generar_ticket(pedido_id)
+
+    return render_template(
+        "admin/ticket_preview.html",
+        ticket=ticket,
+        pedido_id=pedido_id
+    )
+
+@app.post("/crear_pedido")
+def crear_pedido_route():
+    datos = request.get_json()
+    datos_cliente = datos["cliente"]
+    carrito = datos["carrito"]
+
+    try:
+        pedido_id = crear_pedido(datos_cliente, carrito)
+
+        pedido = obtener_pedido_completo(pedido_id)
+
+        # Ejecutar impresión + WhatsApp en segundo plano
+        iniciar_notificacion(pedido_id) 
+               
+        return jsonify({
+            "ok": True,
+            "pedido_id": pedido_id,
+            "numero": pedido["numero"],
+        })
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.route("/admin/productos/nuevo", methods=["GET", "POST"])
+@permiso_requerido("puede_crear")
+def nuevo_producto():
+
+    error = None
+    form = {}
+
+    if request.method == "POST":
+
+        form = {
+            "codigo": request.form.get("codigo", "").strip(),
+            "producto": request.form.get("producto", "").strip(),
+            "marca": request.form.get("marca", "").strip(),
+            "tipo": request.form.get("tipo", "").strip(),
+            "presentacion": request.form.get("presentacion", "").strip(),
+            "stock": request.form.get("stock", "").strip(),
+            "precio": request.form.get("precio", "").strip(),
+        }
+
+        try:
+
+            stock_inicial = int(form["stock"] or 0)
+            precio = float((form["precio"] or "0").replace(",", "."))
+
+        except ValueError:
+            error = "Stock y precio deben ser números."
+
+        if error is None:
+
+            try:
+
+                crear_producto(
+                    codigo=form["codigo"],
+                    producto=form["producto"],
+                    marca=form["marca"],
+                    tipo=form["tipo"],
+                    presentacion=form["presentacion"],
+                    stock_inicial=stock_inicial,
+                    precio=precio,
+                    # si ya existe una foto nombrada con este código, se asigna sola
+                    imagen=obtener_imagen_producto(form["codigo"])
+                )
+
+                flash(
+                    f"Producto {form['codigo']} - {form['producto']} creado "
+                    f"con stock inicial {stock_inicial}.",
+                    "success"
+                )
+
+                return redirect("/admin/productos")
+
+            except ValueError as e:
+                error = str(e)
+
+    return render_template(
+        "admin/nuevo_producto.html",
+        error=error,
+        form=form,
+        nombres=obtener_nombres_producto()
+    )
+
+
+@app.route("/admin/productos/editar/<int:id>", methods=["GET","POST"])
+def editar_producto(id):
+
+    productos = obtener_admproductos()
+
+    producto = next(
+        (
+            p for p in productos
+            if p["id"] == id
+        ),
+        None
+    )
+
+
+    if producto is None:
+        return "Producto no encontrado", 404
+
+
+    if request.method == "POST":
+
+        actualizar_producto(
+            id,
+            request.form["producto"],
+            request.form["marca"],
+            request.form["tipo"],
+            request.form["presentacion"],
+            producto["stock"],
+            request.form["precio"]
+        )
+
+        return redirect("/admin/productos")
+
+
+    return render_template(
+        "admin/editar_producto.html",
+        producto=producto
+    )
+
+# ======================================================
+# AJUSTE MANUAL DE STOCK (compras, mermas, regularización)
+# ======================================================
+@app.route("/admin/productos/<int:id>/ajustar-stock", methods=["GET", "POST"])
+@permiso_requerido("puede_editar")
+def ajustar_stock(id):
+
+    productos = obtener_admproductos()
+
+    producto = next(
+        (p for p in productos if p["id"] == id),
+        None
+    )
+
+    if producto is None:
+        return "Producto no encontrado", 404
+
+    if request.method == "POST":
+
+        tipo = request.form["tipo"]
+        cantidad = int(request.form["cantidad"])
+        observacion = request.form.get("observacion", "")
+
+        try:
+            ajustar_stock_manual(
+                producto["codigo"],
+                tipo,
+                cantidad,
+                observacion
+            )
+        except ValueError as e:
+            movimientos = obtener_movimientos_producto(producto["codigo"])
+            return render_template(
+                "admin/ajustar_stock.html",
+                producto=producto,
+                movimientos=movimientos,
+                error=str(e)
+            )
+
+        return redirect("/admin/productos")
+
+    movimientos = obtener_movimientos_producto(producto["codigo"])
+
+    return render_template(
+        "admin/ajustar_stock.html",
+        producto=producto,
+        movimientos=movimientos,
+        error=None
+    )
+
+@app.route("/admin/clientes")
+def admin_clientes():
+
+    clientes = obtener_clientes()
+
+    return render_template(
+        "admin/clientes.html",
+        clientes=clientes
+    )
+
+@app.route(
+    "/admin/clientes/editar/<int:id>",
+    methods=["GET","POST"]
+)
+
+def editar_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+
+    if request.method == "POST":
+
+        actualizar_cliente_admin(
+            id,
+            request.form["nombre"],
+            request.form["telefono"],
+            request.form["direccion"],
+            request.form["referencia"]
+        )
+
+        return redirect("/admin/clientes")
+
+
+
+    return render_template(
+        "admin/editar_cliente.html",
+        cliente=cliente
+    )
+
+def pedidos_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+    pedidos = obtener_pedidos_cliente(id)
+
+
+    return render_template(
+        "admin/pedidos_cliente.html",
+        cliente=cliente,
+        pedidos=pedidos
+    )
+
+@app.route("/admin/clientes/<int:id>/pedidos")
+def pedidos_cliente(id):
+
+    cliente = obtener_cliente_por_id(id)
+
+    pedidos = obtener_pedidos_cliente(id)
+
+
+    return render_template(
+        "admin/pedidos_cliente.html",
+        cliente=cliente,
+        pedidos=pedidos
+    )
+
+@app.route("/admin/pedido/<int:id>/editar", methods=["GET","POST"])
+@permiso_requerido("puede_editar")
+def editar_pedido(id):
+
+    pedido = obtener_pedido_completo(id)
+
+    if pedido is None:
+        return "Pedido no encontrado", 404
+
+    clientes = obtener_clientes()
+
+
+    if request.method == "POST":
+
+        datos = {
+
+            "tipo_pago": request.form["tipo_pago"],
+            "direccion": request.form["direccion"],
+            "observaciones": request.form["observaciones"]
+
+        }
+
+        cliente_sel = request.form.get("cliente_id")
+
+        if cliente_sel == "__nuevo__":
+
+            nombre_nuevo = request.form.get("nuevo_nombre", "").strip()
+
+            if not nombre_nuevo:
+
+                pedido = obtener_pedido_completo(id)
+                clientes = obtener_clientes()
+
+                return render_template(
+                    "admin/editar_pedido.html",
+                    pedido=pedido,
+                    clientes=clientes,
+                    error="Debes ingresar al menos el nombre del nuevo cliente."
+                )
+
+            datos["cliente_nuevo"] = {
+                "nombre": nombre_nuevo,
+                "telefono": request.form.get("nuevo_telefono", "").strip(),
+                "direccion": datos["direccion"],
+                "referencia": request.form.get("nuevo_referencia", "").strip()
+            }
+
+        elif cliente_sel:
+
+            datos["cliente_id"] = cliente_sel
+
+        ids = request.form.getlist("item_id")
+        codigos = request.form.getlist("item_codigo")
+        cantidades = request.form.getlist("item_cantidad")
+        eliminados = request.form.getlist("item_eliminar")
+
+        items = []
+
+        for i in range(len(codigos)):
+
+            items.append({
+                "id": int(ids[i]) if ids[i] else None,
+                "codigo": codigos[i],
+                "cantidad": int(cantidades[i]) if cantidades[i] else 0,
+                "eliminar": eliminados[i] == "1"
+            })
+
+        try:
+
+            actualizar_pedido(id, datos, items)
+
+        except ValueError as e:
+
+            pedido = obtener_pedido_completo(id)
+
+            return render_template(
+                "admin/editar_pedido.html",
+                pedido=pedido,
+                clientes=clientes,
+                error=str(e)
+            )
+
+        return redirect(
+            f"/admin/pedido/{id}"
+        )
+
+
+    return render_template(
+        "admin/editar_pedido.html",
+        pedido=pedido,
+        clientes=clientes,
+        error=None
+    )
+
+# ======================================================
+# REPORTE DE VENTAS
+# ======================================================
+
+@app.route("/admin/reporte-ventas")
+def reporte_ventas():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    reporte = obtener_reporte_ventas(
+        desde=desde,
+        hasta=hasta
+    )
+
+    return render_template(
+        "admin/reporte_ventas.html",
+        reporte=reporte,
+        desde=desde,
+        hasta=hasta
+    )
+
+
+# ======================================================
+# DESCARGAR REPORTE DE VENTAS EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-ventas/descargar")
+def descargar_reporte_ventas():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    reporte = obtener_reporte_ventas(
+        desde=desde,
+        hasta=hasta
+    )
+
+    # ======================================================
+    # CREAR LIBRO
+    # ======================================================
+
+    wb = Workbook()
+
+    ws = wb.active
+    ws.title = "Ventas"
+
+    # ======================================================
+    # ENCABEZADOS
+    # ======================================================
+
+    encabezados = [
+        "Pedido",
+        "Fecha",
+        "Estado",
+        "Tipo de pago",
+        "Cliente",
+        "Teléfono",
+        "Código",
+        "Producto",
+        "Marca",
+        "Presentación",
+        "Cantidad",
+        "Precio unitario",
+        "Importe"
+    ]
+
+    ws.append(encabezados)
+
+    # Encabezados en negrita
+    for celda in ws[1]:
+        celda.font = Font(bold=True)
+
+    # ======================================================
+    # DATOS
+    # ======================================================
+
+    for item in reporte:
+
+        ws.append([
+            str(item.get("numero_pedido") or ""),
+            str(item.get("fecha") or ""),
+            str(item.get("estado") or ""),
+            str(item.get("tipo_pago") or ""),
+            str(item.get("cliente") or ""),
+            str(item.get("telefono") or ""),
+            str(item.get("codigo") or ""),
+            str(item.get("producto") or ""),
+            str(item.get("marca") or ""),
+            str(item.get("presentacion") or ""),
+            float(item.get("cantidad") or 0),
+            float(item.get("precio_unitario") or 0),
+            float(item.get("importe") or 0)
+        ])
+
+    # ======================================================
+    # FORMATO DE COLUMNAS
+    # ======================================================
+
+    anchos = {
+        "A": 16,
+        "B": 20,
+        "C": 15,
+        "D": 18,
+        "E": 30,
+        "F": 15,
+        "G": 15,
+        "H": 30,
+        "I": 20,
+        "J": 20,
+        "K": 12,
+        "L": 18,
+        "M": 18
+    }
+
+    for columna, ancho in anchos.items():
+        ws.column_dimensions[columna].width = ancho
+
+    # ======================================================
+    # FORMATO MONEDA
+    # ======================================================
+
+    for fila in range(2, ws.max_row + 1):
+
+        ws[f"L{fila}"].number_format = '"S/" #,##0.00'
+        ws[f"M{fila}"].number_format = '"S/" #,##0.00'
+
+    # ======================================================
+    # FORMATO GENERAL
+    # ======================================================
+
+    ws.freeze_panes = "A2"
+    ws.auto_filter.ref = ws.dimensions
+
+    # ======================================================
+    # GUARDAR EN MEMORIA
+    # ======================================================
+
+    archivo = BytesIO()
+
+    wb.save(archivo)
+
+    archivo.seek(0)
+
+    # ======================================================
+    # VALIDAR QUE EL XLSX SE PUEDA ABRIR
+    # ======================================================
+
+    try:
+
+        from openpyxl import load_workbook
+
+        archivo_prueba = BytesIO(archivo.getvalue())
+
+        libro_prueba = load_workbook(
+            archivo_prueba,
+            read_only=True
+        )
+
+        libro_prueba.close()
+
+        archivo.seek(0)
+
+    except Exception as e:
+
+        logger.error(
+            f"Error validando reporte Excel: {str(e)}"
+        )
+
+        return jsonify({
+            "ok": False,
+            "error": "El archivo Excel generado no es válido.",
+            "detalle": str(e)
+        }), 500
+
+    # ======================================================
+    # NOMBRE DEL ARCHIVO
+    # ======================================================
+
+    nombre = "reporte_ventas"
+
+    if desde and hasta:
+        nombre += f"_{desde}_a_{hasta}"
+
+    nombre += ".xlsx"
+
+    # ======================================================
+    # DESCARGA
+    # ======================================================
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name=nombre,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ======================================================
+# REPORTE - VENTAS POR PRODUCTO
+# ======================================================
+
+@app.route("/admin/reporte-productos")
+def reporte_productos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    ventas = obtener_ventas_por_producto(
+        desde=desde,
+        hasta=hasta
+    )
+
+    return render_template(
+        "admin/reporte_productos.html",
+        ventas=ventas,
+        desde=desde,
+        hasta=hasta
+    )
+
+# ======================================================
+# DESCARGAR REPORTE DE VENTAS POR PRODUCTO EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-productos/excel")
+def descargar_reporte_productos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+
+    ventas = obtener_ventas_por_producto(
+        desde=desde,
+        hasta=hasta
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for item in ventas:
+
+        datos.append({
+
+            "Código": item["codigo"],
+            "Producto": item["producto"],
+            "Marca": item["marca"],
+            "Presentación": item["presentacion"],
+            "Cantidad vendida": item["cantidad"],
+            "Importe total": item["importe"]
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Ventas por Producto"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_ventas_por_producto.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ======================================================
+# REPORTE DE INVENTARIO ACTUAL
+# ======================================================
+
+@app.route("/admin/reporte-inventario")
+def reporte_inventario():
+
+    inventario = obtener_reporte_inventario()
+
+    return render_template(
+        "admin/reporte_inventario.html",
+        inventario=inventario
+    )
+
+# ======================================================
+# INVENTARIO FÍSICO (stock real vs stock teórico)
+# ======================================================
+
+@app.route("/admin/inventario-fisico")
+def inventario_fisico_lista():
+
+    inventarios = listar_inventarios()
+
+    return render_template(
+        "admin/inventario_fisico_lista.html",
+        inventarios=inventarios
+    )
+
+
+@app.post("/admin/inventario-fisico/nuevo")
+def inventario_fisico_nuevo():
+
+    observacion = request.form.get("observacion", "")
+
+    nuevo = crear_inventario(
+        observacion=observacion,
+        usuario=session.get("nombre_completo") or session.get("usuario_login")
+    )
+
+    return redirect(f"/admin/inventario-fisico/{nuevo['id']}")
+
+
+@app.route("/admin/inventario-fisico/<int:inventario_id>")
+def inventario_fisico_detalle(inventario_id):
+
+    inventario = obtener_inventario(inventario_id)
+
+    if inventario is None:
+        return redirect("/admin/inventario-fisico")
+
+    return render_template(
+        "admin/inventario_fisico.html",
+        inventario=inventario,
+        valorizacion=VALORIZAR_DIFERENCIA_CON
+    )
+
+
+@app.post("/admin/inventario-fisico/<int:inventario_id>/guardar")
+def inventario_fisico_guardar(inventario_id):
+
+    data = request.get_json(force=True)
+
+    codigo = data.get("codigo")
+    stock_real = data.get("stock_real")
+
+    if codigo is None or stock_real is None:
+        return jsonify({"ok": False, "mensaje": "Datos incompletos"}), 400
+
+    try:
+        resultado = guardar_conteo(inventario_id, codigo, int(stock_real))
+        return jsonify({"ok": True, **resultado})
+
+    except Exception as e:
+        return jsonify({"ok": False, "mensaje": str(e)}), 400
+
+
+@app.post("/admin/inventario-fisico/<int:inventario_id>/cerrar")
+def inventario_fisico_cerrar(inventario_id):
+
+    try:
+        resultado = cerrar_inventario(inventario_id)
+        flash(f"Inventario {resultado['numero']} cerrado. "
+              f"{resultado['ajustados']} producto(s) ajustado(s).", "success")
+
+    except ValueError as e:
+        flash(str(e), "error")
+
+    return redirect(f"/admin/inventario-fisico/{inventario_id}")
+
+
+# ======================================================
+# MÓDULO DE COMPRAS (costo y márgenes de ganancia)
+# ======================================================
+
+@app.route("/admin/compras")
+@admin_required
+def compras_lista():
+
+    compras = listar_compras()
+    productos = obtener_productos()
+
+    return render_template(
+        "admin/compras.html",
+        compras=compras,
+        productos=productos
+    )
+
+
+@app.post("/admin/compras/nueva")
+@admin_required
+def compras_nueva():
+
+    proveedor = request.form.get("proveedor", "")
+    observacion = request.form.get("observacion", "")
+
+    codigos = request.form.getlist("codigo[]")
+    cantidades = request.form.getlist("cantidad[]")
+    precios = request.form.getlist("precio_unitario[]")
+
+    items = []
+    for i in range(len(codigos)):
+        if codigos[i] and cantidades[i] and precios[i]:
+            items.append({
+                "codigo": codigos[i],
+                "cantidad": cantidades[i],
+                "precio_unitario": precios[i]
+            })
+
+    try:
+        resultado = registrar_compra(
+            proveedor=proveedor,
+            items=items,
+            observacion=observacion,
+            usuario=session.get("nombre_completo") or session.get("usuario_login")
+        )
+        flash(f"Compra {resultado['numero']} registrada por S/ {resultado['total']:.2f}. "
+              f"Stock y costo promedio actualizados.", "success")
+
+    except Exception as e:
+        flash(f"No se pudo registrar la compra: {e}", "error")
+
+    return redirect("/admin/compras")
+
+
+@app.route("/admin/compras/<int:compra_id>")
+@admin_required
+def compras_detalle(compra_id):
+
+    compra = obtener_compra(compra_id)
+
+    if compra is None:
+        return redirect("/admin/compras")
+
+    return render_template(
+        "admin/compra_detalle.html",
+        compra=compra
+    )
+
+
+@app.route("/admin/margenes")
+@admin_required
+def margenes():
+
+    productos = obtener_margenes()
+
+    return render_template(
+        "admin/margenes.html",
+        productos=productos
+    )
+
+
+@app.route("/admin/productos/buscar/<codigo>")
+def productos_buscar_codigo(codigo):
+
+    producto = buscar_por_codigo(codigo)
+
+    if producto is None:
+        return jsonify({"ok": False}), 404
+
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT precio_compra FROM productos WHERE codigo = ?", (codigo,))
+    row = cursor.fetchone()
+    conn.close()
+
+    return jsonify({
+        "ok": True,
+        "producto": producto["producto"],
+        "marca": producto["marca"],
+        "stock": producto["stock"],
+        "precio_compra": (row["precio_compra"] if row and row["precio_compra"] else 0)
+    })
+
+
+# ======================================================
+# DESCARGAR REPORTE DE INVENTARIO EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-inventario/excel")
+def descargar_reporte_inventario():
+
+    inventario = obtener_reporte_inventario()
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for item in inventario:
+
+        datos.append({
+
+            "Código": item["codigo"],
+            "Producto": item["producto"],
+            "Marca": item["marca"],
+            "Presentación": item["presentacion"],
+            "Stock actual": item["stock"],
+            "Precio": item["precio"],
+            "Valor en stock": item["valor_stock"]
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Inventario"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_inventario.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+# ======================================================
+# REPORTE DE MOVIMIENTOS DE STOCK
+# ======================================================
+
+@app.route("/admin/reporte-movimientos")
+def reporte_movimientos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo = request.args.get("tipo")
+
+    movimientos = obtener_reporte_movimientos(
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+    return render_template(
+        "admin/reporte_movimientos.html",
+        movimientos=movimientos,
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+# ======================================================
+# DESCARGAR REPORTE DE MOVIMIENTOS EN EXCEL
+# ======================================================
+
+@app.route("/admin/reporte-movimientos/excel")
+def descargar_reporte_movimientos():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo = request.args.get("tipo")
+
+    movimientos = obtener_reporte_movimientos(
+        desde=desde,
+        hasta=hasta,
+        tipo=tipo
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for m in movimientos:
+
+        datos.append({
+
+            "Fecha": m["fecha"],
+            "Tipo": m["tipo"],
+            "Código": m["producto_codigo"],
+            "Producto": m["producto"],
+            "Marca": m["marca"],
+            "Cantidad": m["cantidad"],
+            "Stock anterior": m["stock_anterior"],
+            "Stock nuevo": m["stock_nuevo"],
+            "Pedido": m["pedido_id"] or "",
+            "Observación": m["observacion"] or ""
+
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(
+        archivo,
+        engine="openpyxl"
+    ) as writer:
+
+        df.to_excel(
+            writer,
+            index=False,
+            sheet_name="Movimientos de Stock"
+        )
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_movimientos_stock.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+
+#ticket = generar_ticket(4)
+#print(ticket.productos)
+#print(ticket.generar_ticket_pos())
+
+# ======================================================
+# CAJA / RECAUDACIÓN
+# ======================================================
+
+@app.route("/admin/caja", methods=["GET", "POST"])
+@login_required
+def caja():
+
+    if request.method == "POST":
+
+        user = usuario_actual()
+
+        if not (user["es_admin"] or user["puede_crear"]):
+            return render_template(
+                "admin/sin_permiso.html",
+                mensaje="Tu perfil no tiene permiso para registrar movimientos de caja."
+            ), 403
+
+        try:
+
+            caja_service.registrar_movimiento_manual(
+                fecha=request.form["fecha"],
+                tipo_pago=request.form["tipo_pago"],
+                tipo_movimiento=request.form["tipo_movimiento"],
+                monto=float(request.form["monto"]),
+                observacion=request.form.get("observacion", "")
+            )
+
+        except ValueError:
+            pass
+
+        return redirect(url_for("caja"))
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo_pago = request.args.get("tipo_pago")
+
+    movimientos = caja_service.obtener_movimientos_caja(
+        desde=desde, hasta=hasta, tipo_pago=tipo_pago
+    )
+
+    saldos = caja_service.obtener_saldos_caja()
+
+    return render_template(
+        "admin/caja.html",
+        movimientos=movimientos,
+        saldos=saldos,
+        desde=desde,
+        hasta=hasta,
+        tipo_pago=tipo_pago,
+        tipos_pago=caja_service.TIPOS_PAGO
+    )
+
+
+@app.route("/admin/caja/eliminar/<int:id>", methods=["POST"])
+@admin_required
+def eliminar_movimiento_caja(id):
+
+    caja_service.eliminar_movimiento_manual(id)
+
+    return redirect(url_for("caja"))
+
+
+@app.route("/admin/caja/excel")
+def descargar_reporte_caja():
+
+    desde = request.args.get("desde")
+    hasta = request.args.get("hasta")
+    tipo_pago = request.args.get("tipo_pago")
+
+    movimientos = caja_service.obtener_movimientos_caja(
+        desde=desde, hasta=hasta, tipo_pago=tipo_pago
+    )
+
+    import pandas as pd
+    from io import BytesIO
+
+    datos = []
+
+    for m in movimientos:
+
+        datos.append({
+            "Fecha": m["fecha"],
+            "Tipo de pago": m["tipo_pago"],
+            "Movimiento": m["tipo_movimiento"],
+            "Monto": m["monto"],
+            "Pedido": m["pedido_numero"] or "",
+            "Observación": m["observacion"] or ""
+        })
+
+    df = pd.DataFrame(datos)
+
+    archivo = BytesIO()
+
+    with pd.ExcelWriter(archivo, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Caja")
+
+    archivo.seek(0)
+
+    return send_file(
+        archivo,
+        as_attachment=True,
+        download_name="reporte_caja.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+
+# ======================================================
+# AUTENTICACIÓN
+# ======================================================
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+
+    if request.method == "POST":
+
+        usuario = request.form.get("usuario", "").strip()
+        password = request.form.get("password", "")
+
+        user = usuario_service.verificar_login(usuario, password)
+
+        if user is None:
+            return render_template("admin/login.html", error="Usuario o contraseña incorrectos.")
+
+        iniciar_sesion(user)
+
+        siguiente = request.args.get("next") or "/admin"
+        return redirect(siguiente)
+
+    return render_template("admin/login.html", error=None)
+
+
+@app.route("/logout")
+def logout():
+
+    cerrar_sesion()
+    return redirect(url_for("login"))
+
+
+@app.route("/login/recuperar", methods=["GET", "POST"])
+def recuperar_password():
+
+    paso = "usuario"
+    usuario_ingresado = None
+    pregunta = None
+    error = None
+
+    if request.method == "POST":
+
+        usuario_ingresado = request.form.get("usuario", "").strip()
+        accion = request.form.get("accion")
+
+        if accion == "buscar":
+
+            pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
+
+            if pregunta is None:
+                error = "No se encontró ese usuario, o está inactivo."
+                paso = "usuario"
+            else:
+                paso = "respuesta"
+
+        elif accion == "resetear":
+
+            respuesta = request.form.get("respuesta", "")
+            nueva = request.form.get("password_nueva", "")
+            confirmar = request.form.get("password_confirmar", "")
+
+            if nueva != confirmar:
+                error = "Las contraseñas no coinciden."
+                paso = "respuesta"
+                pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
+
+            elif len(nueva) < 4:
+                error = "La contraseña debe tener al menos 4 caracteres."
+                paso = "respuesta"
+                pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
+
+            else:
+
+                try:
+                    usuario_service.resetear_password_con_respuesta(
+                        usuario_ingresado, respuesta, nueva
+                    )
+                    return render_template("admin/recuperar.html", paso="listo", error=None)
+
+                except ValueError as e:
+                    error = str(e)
+                    paso = "respuesta"
+                    pregunta = usuario_service.obtener_pregunta_seguridad(usuario_ingresado)
+
+    return render_template(
+        "admin/recuperar.html",
+        paso=paso,
+        usuario=usuario_ingresado,
+        pregunta=pregunta,
+        error=error
+    )
+
+
+# ======================================================
+# MI CUENTA (cualquier usuario logueado)
+# ======================================================
+
+@app.route("/admin/mi-cuenta", methods=["GET", "POST"])
+@login_required
+def mi_cuenta():
+
+    user = usuario_service.obtener_usuario_por_id(session["usuario_id"])
+    mensaje = None
+    error = None
+
+    if request.method == "POST":
+
+        accion = request.form.get("accion")
+
+        try:
+
+            if accion == "datos":
+
+                usuario_service.actualizar_mi_usuario(
+                    session["usuario_id"],
+                    request.form["nombre_completo"].strip(),
+                    request.form["usuario"].strip()
+                )
+
+                session["nombre_completo"] = request.form["nombre_completo"].strip()
+                session["usuario_login"] = request.form["usuario"].strip()
+
+                mensaje = "Datos actualizados."
+
+            elif accion == "password":
+
+                usuario_service.cambiar_mi_password(
+                    session["usuario_id"],
+                    request.form["password_actual"],
+                    request.form["password_nueva"]
+                )
+
+                mensaje = "Contraseña actualizada."
+
+            elif accion == "seguridad":
+
+                usuario_service.actualizar_pregunta_seguridad(
+                    session["usuario_id"],
+                    request.form["pregunta_seguridad"].strip(),
+                    request.form["respuesta_seguridad"].strip()
+                )
+
+                mensaje = "Pregunta de seguridad actualizada."
+
+        except ValueError as e:
+            error = str(e)
+
+        user = usuario_service.obtener_usuario_por_id(session["usuario_id"])
+
+    return render_template(
+        "admin/mi_cuenta.html",
+        user=user,
+        mensaje=mensaje,
+        error=error
+    )
+
+
+# ======================================================
+# GESTIÓN DE USUARIOS (solo Administrador)
+# ======================================================
+
+@app.route("/admin/usuarios", methods=["GET", "POST"])
+@admin_required
+def admin_usuarios():
+
+    error = None
+
+    if request.method == "POST":
+
+        try:
+
+            usuario_service.crear_usuario(
+                nombre_completo=request.form["nombre_completo"].strip(),
+                usuario=request.form["usuario"].strip(),
+                password=request.form["password"],
+                perfil_id=int(request.form["perfil_id"]),
+                pregunta_seguridad=request.form.get("pregunta_seguridad", "").strip() or "¿Cuál es tu color favorito?",
+                respuesta_seguridad=request.form.get("respuesta_seguridad", "").strip() or "sin respuesta"
+            )
+
+        except ValueError as e:
+            error = str(e)
+
+        if error is None:
+            return redirect(url_for("admin_usuarios"))
+
+    usuarios = usuario_service.obtener_usuarios()
+    perfiles = perfil_service.obtener_perfiles()
+
+    return render_template(
+        "admin/usuarios.html",
+        usuarios=usuarios,
+        perfiles=perfiles,
+        error=error
+    )
+
+
+@app.route("/admin/usuarios/<int:id>/editar", methods=["GET", "POST"])
+@admin_required
+def admin_editar_usuario(id):
+
+    error = None
+
+    if request.method == "POST":
+
+        accion = request.form.get("accion")
+
+        if accion == "datos":
+
+            usuario_service.actualizar_usuario_admin(
+                id,
+                request.form["nombre_completo"].strip(),
+                int(request.form["perfil_id"]),
+                request.form.get("activo") == "1"
+            )
+
+        elif accion == "resetear_password":
+
+            nueva = request.form.get("password_nueva", "")
+
+            if len(nueva) < 4:
+                error = "La contraseña debe tener al menos 4 caracteres."
+            else:
+                usuario_service.resetear_password_admin(id, nueva)
+
+        if error is None and accion != "resetear_password":
+            return redirect(url_for("admin_usuarios"))
+
+    user = usuario_service.obtener_usuario_por_id(id)
+    perfiles = perfil_service.obtener_perfiles()
+
+    return render_template(
+        "admin/editar_usuario.html",
+        user=user,
+        perfiles=perfiles,
+        error=error,
+        mensaje="Contraseña restablecida." if request.method == "POST" and error is None else None
+    )
+
+
+# ======================================================
+# GESTIÓN DE PERFILES (solo Administrador)
+# ======================================================
+
+@app.route("/admin/perfiles", methods=["GET", "POST"])
+@admin_required
+def admin_perfiles():
+
+    error = None
+
+    if request.method == "POST":
+
+        try:
+
+            perfil_service.crear_perfil(
+                nombre=request.form["nombre"].strip(),
+                puede_crear=request.form.get("puede_crear") == "1",
+                puede_editar=request.form.get("puede_editar") == "1"
+            )
+
+        except ValueError as e:
+            error = str(e)
+
+        if error is None:
+            return redirect(url_for("admin_perfiles"))
+
+    perfiles = perfil_service.obtener_perfiles()
+
+    return render_template(
+        "admin/perfiles.html",
+        perfiles=perfiles,
+        error=error
+    )
+
+
+@app.route("/admin/perfiles/<int:id>/editar", methods=["POST"])
+@admin_required
+def admin_editar_perfil(id):
+
+    try:
+
+        perfil_service.actualizar_perfil(
+            id,
+            request.form["nombre"].strip(),
+            request.form.get("puede_crear") == "1",
+            request.form.get("puede_editar") == "1"
+        )
+
+    except ValueError:
+        pass
+
+    return redirect(url_for("admin_perfiles"))
+
+
+@app.route("/admin/perfiles/<int:id>/eliminar", methods=["POST"])
+@admin_required
+def admin_eliminar_perfil(id):
+
+    try:
+        perfil_service.eliminar_perfil(id)
+    except ValueError:
+        pass
+
+    return redirect(url_for("admin_perfiles"))
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
